@@ -1,442 +1,505 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Маршруты на неделю</title>
+<title>Пеший планировщик</title>
 <style>
 :root{--bg:#f6f7f5;--fg:#1d2420;--mut:#66706a;--card:#fff;--ac:#0f766e;--bd:#d8ddd9;--wr:#b45309}
 @media(prefers-color-scheme:dark){:root{--bg:#141917;--fg:#e6ebe8;--mut:#98a39c;--card:#1d2421;--ac:#4fd1c0;--bd:#33403a;--wr:#f0b45a}}
 *{box-sizing:border-box}
-body{margin:0 auto;max-width:880px;padding:16px;font:15px/1.45 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
-h1{font-size:22px;margin:8px 0 4px}
-h2{font-size:16px;margin:26px 0 6px}
+body{margin:0 auto;max-width:900px;padding:16px;font:15px/1.45 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+h1{font-size:22px;margin:8px 0 4px}h2{font-size:16px;margin:26px 0 6px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}
 input,select,button{font:inherit;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
 input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
-button{cursor:pointer;background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}
-button.s{background:var(--card);color:var(--fg);border-color:var(--bd);font-weight:400}
-.sg{position:relative}.sg input{width:100%}
-.dd{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card);border:1px solid var(--bd);border-radius:6px;max-height:260px;overflow:auto}
-.dd div{padding:8px 10px;cursor:pointer}.dd div:hover{background:var(--bg)}
-.row{display:flex;gap:8px;align-items:center;margin:5px 0;flex-wrap:wrap}
-.row .t{flex:1;min-width:200px}
-.m{color:var(--mut);font-size:13px}.w{color:var(--wr)}
-a{color:var(--ac)}input.n{width:68px}
+button:disabled{opacity:.6;cursor:wait}button{cursor:pointer;background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}button.s{background:var(--card);color:var(--fg);border-color:var(--bd);font-weight:400}
+.sg{position:relative}.sg input{width:100%}.dd{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card);border:1px solid var(--bd);border-radius:6px;max-height:260px;overflow:auto}.dd div{padding:8px 10px;cursor:pointer}.dd div:hover{background:var(--bg)}
+.row{display:flex;gap:8px;align-items:center;margin:5px 0;flex-wrap:wrap}.row .t{flex:1;min-width:200px}.m{color:var(--mut);font-size:13px}.w{color:var(--wr)}a{color:var(--ac)}input.n{width:68px}
+.badge{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;margin-left:6px;font-size:12px;color:var(--mut)}
+.dist{white-space:nowrap}.routeStop{font-weight:600}.total{font-size:16px}.hint{padding:9px 11px;border-left:3px solid var(--ac);background:var(--card);border-radius:5px;margin:10px 0}
 </style></head><body>
-<h1>Маршруты на неделю</h1>
-<div class="m">Пять пеших маршрутов (пн–пт): каждый адрес не чаще раза в день, нужное число раз в неделю.</div>
+<h1>Пеший планировщик</h1>
+<div class="m">Добавьте адреса и укажите, сколько раз в неделю каждый нужно посетить.</div>
 <div id="warn"></div>
-
-<h2>Дом (старт)</h2>
-<div class="sg"><input id="hi" placeholder="Адрес дома, вместе с городом"></div>
-<div id="hl" class="m"></div>
-
-<h2>Остановки автобусов 36 и 228</h2>
-<div class="row"><span id="bl" class="m"></span><button class="s" id="bs">Загрузить заново</button></div>
 
 <h2>Адреса для посещения</h2>
 <div class="sg"><input id="ai" placeholder="Начните вводить адрес и выберите из списка"></div>
 <div id="al"></div>
 
-<div class="row" style="margin-top:16px">
-<button id="go">Построить маршруты</button>
-<button class="s" id="ex">Экспорт</button>
-<button class="s" id="im">Импорт</button>
-<button class="s" id="sa">Сохранить адреса</button>
-<button class="s" id="la">Загрузить адреса</button>
-<input type="file" id="fa" hidden accept=".json">
-<input type="file" id="fi" hidden accept=".json">
+<div class="row" style="margin-top:16px"><label class="m" for="dn">Дней в неделю:</label>
+ <select id="dn"><option value="auto">Авто (минимум дней)</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></div>
+<div class="row" style="margin-top:8px">
+ <button id="go">Построить маршруты</button>
+ <button class="s" id="ex">Экспорт</button>
+ <button class="s" id="im">Импорт</button>
+ <button class="s" id="sa">Сохранить адреса</button>
+ <button class="s" id="la">Загрузить адреса</button>
+ <input type="file" id="fa" hidden accept=".json">
+ <input type="file" id="fi" hidden accept=".json">
 </div>
 <div id="st" class="m"></div>
 <div id="out"></div>
 
 <script>
-/* ===== НАСТРОЙКИ: вставьте свои ключи ===== */
+const BUS_RAW=[
+ /* Маршрут 36 — Сахарово -> Мамулино. Координаты остановок BusGet. */
+ ['Сахарово',56.8987,36.0495,'36'],
+ ['ул. Андреевская',56.8944,36.0432,'36'],
+ ['Аркатово',56.8905,36.0298,'36'],
+ ['Жданово',56.8850,36.0192,'36'],
+ ['СНТ Мир',56.8792,36.0137,'36'],
+ ['Аввакумово',56.8756,36.0077,'36'],
+ ['Дачи',56.8724,36.0042,'36'],
+ ['Поворот на Рябинки',56.8680,35.9977,'36'],
+ ['Сахаровское шоссе, 17',56.8668,35.9927,'36'],
+ ['Промкомбинат',56.8660,35.9787,'36'],
+ ['Стеклозавод',56.8661,35.9740,'36'],
+ ['Тверское лесничество',56.8661,35.9685,'36'],
+ ['КСМ-2',56.8637,35.9612,'36'],
+ ['ул. 2-я Силикатная',56.8655,35.9528,'36'],
+ ['ул. Котовского',56.8663,35.9492,'36'],
+ ['ул. Маяковского',56.8670,35.9437,'36'],
+ ['ул. 2-я Новозаводская',56.8672,35.9376,'36'],
+ ['ул. Александра Невского',56.8674,35.9307,'36'],
+ ['Пожарная площадь',56.8676,35.9264,'36'],
+ ['Речной вокзал',56.8656,35.9115,'36'],
+ ['Тверской проспект',56.8582,35.9078,'36'],
+ ['Библиотека им. Герцена',56.8545,35.9065,'36'],
+ ['Площадь Капошвара',56.8474,35.9053,'36'],
+ ['ул. Склизкова',56.8436,35.9015,'36'],
+ ['Спортивный переулок',56.8394,35.8961,'36'],
+ ['Железнодорожный вокзал',56.8364,35.8942,'36'],
+ ['Автовокзал',56.8347,35.9008,'36'],
+ ['Октябрьский проспект',56.8279,35.8965,'36'],
+ ['Посёлок им. Чкалова',56.8247,35.8923,'36'],
+ ['ул. Марины Расковой',56.8206,35.8870,'36'],
+ ['Торговый центр Глобус',56.8172,35.8860,'36'],
+ ['Брусилово',56.8229,35.8726,'36'],
+ ['Мамулино-2',56.8243,35.8673,'36'],
+ ['Спорткомплекс',56.8251,35.8604,'36'],
+ ['Почта',56.8261,35.8510,'36'],
+ ['Поликлиника',56.8266,35.8461,'36'],
+ ['Мамулино',56.8272,35.8406,'36'],
+ /* Маршрут 36 — Мамулино -> Сахарово. Каждая платформа хранится отдельно. */
+ ['Мамулино',56.8270,35.8407,'36'],
+ ['Поликлиника',56.8262,35.8483,'36'],
+ ['Почта',56.8258,35.8520,'36'],
+ ['Спорткомплекс',56.8247,35.8617,'36'],
+ ['Мамулино-2',56.8240,35.8681,'36'],
+ ['Брусилово',56.8223,35.8736,'36'],
+ ['ул. Марины Расковой',56.8210,35.8884,'36'],
+ ['Посёлок им. Чкалова',56.8247,35.8931,'36'],
+ ['Октябрьский проспект',56.8277,35.8969,'36'],
+ ['Бульвар Цанова, 2',56.8341,35.9089,'36'],
+ ['ул. Коминтерна, д.81',56.8305,35.9100,'36'],
+ ['Автовокзал',56.8340,35.9007,'36'],
+ ['Железнодорожный вокзал',56.8373,35.8941,'36'],
+ ['Спортивный переулок',56.8399,35.8972,'36'],
+ ['ул. Склизкова',56.8439,35.9023,'36'],
+ ['Площадь Капошвара',56.8491,35.9068,'36'],
+ ['Гимназия № 12',56.8544,35.9071,'36'],
+ ['Тверской проспект',56.8590,35.9089,'36'],
+ ['Речной вокзал',56.8666,35.9132,'36'],
+ ['Пожарная площадь',56.8674,35.9262,'36'],
+ ['ул. Александра Невского',56.8672,35.9316,'36'],
+ ['ул. 2-я Новозаводская',56.8670,35.9379,'36'],
+ ['ул. Маяковского',56.8668,35.9449,'36'],
+ ['ул. Котовского',56.8660,35.9496,'36'],
+ ['ул. 2-я Силикатная',56.8652,35.9534,'36'],
+ ['КСМ-2',56.8633,35.9621,'36'],
+ ['Тверское лесничество',56.8660,35.9684,'36'],
+ ['Стеклозавод',56.8660,35.9733,'36'],
+ ['Промкомбинат',56.8659,35.9790,'36'],
+ ['Сахаровское шоссе, 17',56.8668,35.9930,'36'],
+ ['Поворот на Рябинки',56.8680,35.9982,'36'],
+ ['Дачи',56.8723,36.0046,'36'],
+ ['Аввакумово',56.8758,36.0082,'36'],
+ ['СНТ Мир',56.8790,36.0136,'36'],
+ ['Жданово',56.8846,36.0191,'36'],
+ ['Аркатово',56.8904,36.0303,'36'],
+ ['ул. Андреевская',56.8940,36.0430,'36'],
+ ['Сахарово',56.8986,36.0494,'36'],
+
+ /* Маршрут 228 — Центр образования №56 -> Аввакумово-конечная. */
+ ['Центр образования №56',56.8102,35.8903,'228'],
+ ['ул. Левитана, д.93А',56.8085,35.8952,'228'],
+ ['ул. Псковская',56.8124,35.9001,'228'],
+ ['ул. Левитана, д.42',56.8171,35.9063,'228'],
+ ['ул. Левитана',56.8184,35.9078,'228'],
+ ['Торговый центр Южный',56.8216,35.9121,'228'],
+ ['ул. Королёва',56.8242,35.9137,'228'],
+ ['Бульвар Гусева',56.8263,35.9063,'228'],
+ ['Магазин',56.8237,35.9031,'228'],
+ ['Универсам',56.8212,35.8986,'228'],
+ ['Посёлок им. Чкалова',56.8247,35.8931,'228'],
+ ['Октябрьский проспект',56.8277,35.8969,'228'],
+ ['ул. Фадеева',56.8372,35.9092,'228'],
+ ['ул. Склизкова',56.8410,35.9141,'228'],
+ ['Парк Победы',56.8463,35.9138,'228'],
+ ['Площадь Капошвара',56.8491,35.9068,'228'],
+ ['Гимназия №12',56.8544,35.9071,'228'],
+ ['Тверской проспект',56.8590,35.9089,'228'],
+ ['Речной вокзал',56.8667,35.9108,'228'],
+ ['ул. Зинаиды Коноплянниковой',56.8679,35.9057,'228'],
+ ['Бульвар Шмидта',56.8728,35.9077,'228'],
+ ['ул. Красина',56.8769,35.9096,'228'],
+ ['Третьяковский переулок',56.8748,35.9251,'228'],
+ ['Дурмановский переулок',56.8725,35.9241,'228'],
+ ['Пожарная площадь',56.8674,35.9262,'228'],
+ ['ул. Александра Невского',56.8672,35.9316,'228'],
+ ['ул. 2-я Новозаводская',56.8670,35.9379,'228'],
+ ['ул. Маяковского',56.8668,35.9449,'228'],
+ ['ул. Котовского',56.8660,35.9496,'228'],
+ ['ул. 2-я Силикатная',56.8652,35.9534,'228'],
+ ['КСМ-2',56.8633,35.9621,'228'],
+ ['Тверское лесничество',56.8660,35.9684,'228'],
+ ['Стеклозавод',56.8660,35.9733,'228'],
+ ['Промкомбинат',56.8659,35.9790,'228'],
+ ['ЖК Медовый',56.8701,35.9913,'228'],
+ ['Сахаровское шоссе, 17',56.8668,35.9930,'228'],
+ ['Поворот на Рябинки',56.8680,35.9982,'228'],
+ ['Дачи',56.8723,36.0046,'228'],
+ ['Аввакумово',56.8760,36.0079,'228'],
+ ['Аввакумово, 8',56.8785,36.0063,'228'],
+ ['Аввакумово — Конечная',56.8801,36.0008,'228'],
+
+ /* Маршрут 228 — Аввакумово-конечная -> Центр образования №56. */
+ ['Аввакумово — Конечная',56.8800,36.0007,'228'],
+ ['Аввакумово, 8',56.8784,36.0063,'228'],
+ ['Аввакумово',56.8756,36.0077,'228'],
+ ['Дачи',56.8724,36.0042,'228'],
+ ['Поворот на Рябинки',56.8680,35.9977,'228'],
+ ['Сахаровское шоссе, 17',56.8668,35.9927,'228'],
+ ['Промкомбинат',56.8660,35.9787,'228'],
+ ['Стеклозавод',56.8661,35.9740,'228'],
+ ['Тверское лесничество',56.8661,35.9685,'228'],
+ ['КСМ-2',56.8637,35.9612,'228'],
+ ['ул. 2-я Силикатная',56.8655,35.9528,'228'],
+ ['ул. Котовского',56.8663,35.9492,'228'],
+ ['ул. Маяковского',56.8670,35.9437,'228'],
+ ['ул. 2-я Новозаводская',56.8672,35.9376,'228'],
+ ['ул. Александра Невского',56.8674,35.9307,'228'],
+ ['Пожарная площадь',56.8678,35.9255,'228'],
+ ['Учебный комбинат',56.8725,35.9277,'228'],
+ ['Третьяковский переулок',56.8752,35.9248,'228'],
+ ['ул. Красина',56.8766,35.9090,'228'],
+ ['Бульвар Шмидта',56.8729,35.9075,'228'],
+ ['ул. Зинаиды Коноплянниковой',56.8684,35.9057,'228'],
+ ['Речной вокзал',56.8656,35.9115,'228'],
+ ['Тверской проспект',56.8582,35.9078,'228'],
+ ['Библиотека им. Герцена',56.8545,35.9065,'228'],
+ ['Площадь Капошвара',56.8476,35.9081,'228'],
+ ['Парк Победы',56.8463,35.9131,'228'],
+ ['Театр Кукол',56.8442,35.9177,'228'],
+ ['ул. Склизкова',56.8408,35.9133,'228'],
+ ['ул. Фадеева',56.8367,35.9080,'228'],
+ ['Октябрьский проспект',56.8279,35.8965,'228'],
+ ['Посёлок им. Чкалова',56.8247,35.8923,'228'],
+ ['ул. Можайского',56.8231,35.8926,'228'],
+ ['Универсам',56.8212,35.9000,'228'],
+ ['Магазин',56.8243,35.9042,'228'],
+ ['Бульвар Гусева',56.8263,35.9067,'228'],
+ ['ул. Королёва',56.8250,35.9112,'228'],
+ ['Торговый центр Южный',56.8220,35.9123,'228'],
+ ['ул. Левитана',56.8169,35.9055,'228'],
+ ['ул. Псковская',56.8119,35.8992,'228']
+].map(x=>({t:x[0],lat:x[1],lon:x[2],route:x[3]}));
+
+/* Объединяем совпадающие по координатам остановки и сохраняем номера маршрутов. */
+const BUS=(()=>{
+ const m=new Map();
+ for(const s of BUS_RAW){
+  const key=s.lat.toFixed(6)+','+s.lon.toFixed(6);
+  if(!m.has(key))m.set(key,{...s});
+  else{
+   const q=m.get(key);
+   const rs=new Set((q.route+'|'+s.route).split('|'));
+   q.route=[...rs].join('/');
+  }
+ }
+ return [...m.values()];
+})();
+
 const CFG={
- YKEY:'9706b820-13f7-4fd0-9575-57cc9ad71e2a',            // ключ HTTP Геокодера Яндекса
- ORSKEY:'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImU5M2NhNGE0Y2I5YjRmNDg4MmEyYjgyZmRiNjhmYTBmIiwiaCI6Im11cm11cjY0In0=',          // ключ OpenRouteService
- CITY:'Тверь',       // город для подсказок
- BBOX:'35.75,56.78~36.05,56.92', // область поиска: lon,lat~lon,lat
- VISIT:20,           // минут на одной точке по умолчанию
- MAXPTS:11,          // максимум точек в один день
- BUSREF:'36|228',    // номера автобусов, возле остановок которых начинать и заканчивать день
- BBOX2:'56.6,35.4,57.1,36.4', // область поиска остановок: юг,запад,север,восток
- BUS_GAIN:30,        // минимальный выигрыш автобуса, мин
- SPEED:1.3           // м/с, запасная скорость ходьбы
+ YKEY:'9706b820-13f7-4fd0-9575-57cc9ad71e2a',
+ CITY:'Тверь',
+ BBOX:'35.75,56.78~36.05,56.92',
+ MAXPTS:11,
+ SPW:500,  /* штраф (м) за визиты в соседние дни недели */
+ BAL:400,  /* штраф (м) за каждую точку разницы между днями сверх двух */
+ SEARCH_DELAY:350
 };
-/* ========================================== */
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let S={home:null,stops:[],addrs:[],ov:{},plan:null};
-try{S=Object.assign(S,JSON.parse(localStorage.getItem('rp1')||'{}'))}catch(e){}
+
+let S={addrs:[],plan:null};
+try{const z=JSON.parse(localStorage.getItem('rp1')||'{}');if(Array.isArray(z.addrs))S.addrs=z.addrs.filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1))}));}catch(e){}
 const save=()=>localStorage.setItem('rp1',JSON.stringify(S));
+const $=s=>document.querySelector(s);
 const DN=['Пн','Вт','Ср','Чт','Пт'];
-const hm=m=>Math.floor(m/60)+' ч '+Math.round(m%60)+' мин';
-const yl=(p,mode)=>'https://yandex.ru/maps/?rtext='+p.map(x=>x.lat+','+x.lon).join('~')+'&rtt='+mode;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtD=m=>m<1000?Math.round(m)+' м':(m/1000).toFixed(2).replace('.',',')+' км';
+const yl=p=>'https://yandex.ru/maps/?rtext='+p.map(x=>x.lat+','+x.lon).join('~')+'&rtt=pd';
 
-/* --- геокодер и выпадающие подсказки --- */
-async function geo(q,noCity){
- if(!CFG.YKEY)throw Error('Нет ключа Геокодера в CONFIG');
- const g=(noCity?'':CFG.CITY+', ')+q;
- const r=await fetch('https://geocode-maps.yandex.ru/1.x/?format=json&results=5&lang=ru_RU&bbox='+CFG.BBOX+'&apikey='+CFG.YKEY+'&geocode='+encodeURIComponent(g));
- if(!r.ok)throw Error('Геокодер вернул '+r.status);
+async function geo(q){
+ const r=await fetch('https://geocode-maps.yandex.ru/1.x/?format=json&results=5&lang=ru_RU&bbox='+CFG.BBOX+'&apikey='+CFG.YKEY+'&geocode='+encodeURIComponent(CFG.CITY+', '+q));
+ if(!r.ok)throw Error('geo');
  const j=await r.json();
- return j.response.GeoObjectCollection.featureMember.map(m=>{
-  const o=m.GeoObject,[lon,lat]=o.Point.pos.split(' ').map(Number);
-  return{t:o.metaDataProperty.GeocoderMetaData.text,lat,lon}});
+ return j.response.GeoObjectCollection.featureMember.map(m=>{const o=m.GeoObject,[lon,lat]=o.Point.pos.split(' ').map(Number);return{t:o.metaDataProperty.GeocoderMetaData.text,lat,lon};});
 }
-function suggest(inp,pick,noCity){
+function suggest(inp,pick){
  const dd=document.createElement('div');dd.className='dd';inp.parentNode.appendChild(dd);let tm;
- inp.addEventListener('input',()=>{
-  clearTimeout(tm);dd.innerHTML='';
-  if(inp.value.trim().length<4)return;
-  tm=setTimeout(async()=>{
-   try{
-    const L=await geo(inp.value.trim(),noCity);dd.innerHTML='';
-    if(!L.length)dd.innerHTML='<div class="m">Ничего не найдено</div>';
-    L.forEach(p=>{const d=document.createElement('div');d.textContent=p.t;
-     d.onclick=()=>{dd.innerHTML='';inp.value='';pick(p)};dd.appendChild(d)});
-   }catch(e){dd.innerHTML='<div class="w">'+esc(e.message)+'</div>'}
-  },500);
- });
- document.addEventListener('click',e=>{if(e.target!==inp)dd.innerHTML=''});
+ inp.addEventListener('input',()=>{clearTimeout(tm);dd.innerHTML='';if(inp.value.trim().length<4)return;tm=setTimeout(async()=>{try{const L=await geo(inp.value.trim());dd.innerHTML='';if(!L.length)dd.innerHTML='<div class="m">Ничего не найдено</div>';L.forEach(p=>{const d=document.createElement('div');d.textContent=p.t;d.onclick=()=>{dd.innerHTML='';inp.value='';pick(p);};dd.appendChild(d);});}catch(e){dd.innerHTML='<div class="w">Не удалось найти адрес.</div>'; }},CFG.SEARCH_DELAY);});
+ document.addEventListener('click',e=>{if(e.target!==inp)dd.innerHTML='';});
 }
 
-/* --- матрица пеших времен (мин) --- */
-const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r,
- x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
-async function matrix(P){
- const key=P.map(p=>p.lat.toFixed(5)+','+p.lon.toFixed(5)).join(';');
- try{const c=JSON.parse(localStorage.getItem('rpm')||'null');if(c&&c.key===key)return{D:c.D,src:'OpenRouteService (кэш)'}}catch(e){}
- try{
-  if(!CFG.ORSKEY)throw 0;
-  const r=await fetch('https://api.openrouteservice.org/v2/matrix/foot-walking',{method:'POST',
-   headers:{'Content-Type':'application/json',Authorization:CFG.ORSKEY},
-   body:JSON.stringify({locations:P.map(p=>[p.lon,p.lat]),metrics:['duration']})});
-  if(!r.ok)throw 0;
-  const j=await r.json(),D=j.durations.map(r=>r.map(v=>v==null?999:v/60));
-  localStorage.setItem('rpm',JSON.stringify({key,D}));
-  return{D,src:'OpenRouteService'};
- }catch(e){
-  return{D:P.map(a=>P.map(b=>hav(a,b)*1.3/CFG.SPEED/60)),src:'по прямой ×1.3 (ORS недоступен, время приблизительное)'};
- }
-}
+const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+/* ===== Глобальный детерминированный оптимизатор недели ===== */
+const OPT_MS=45000;
+const WORKER_SRC=`
+const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+const bits=m=>{const a=[];for(let i=0;i<31;i++)if(m&(1<<i))a.push(i);return a;};
+const pop=m=>{let c=0;while(m){m&=m-1;c++;}return c;};
+const keyMasks=ms=>ms.slice().sort((a,b)=>a-b).join(',');
 
-/* --- обход точек: ближайший сосед + 2-opt, замкнутый маршрут из ids[0] --- */
-function tsp(ids,D){
- if(ids.length<3)return ids.slice();
- const left=ids.slice(1),t=[ids[0]];
- while(left.length){
-  const l=t[t.length-1];let b=0;
-  for(let i=1;i<left.length;i++)if(D[l][left[i]]<D[l][left[b]])b=i;
-  t.push(left.splice(b,1)[0]);
- }
- let imp=true;
- while(imp){imp=false;
-  for(let i=1;i<t.length-1;i++)for(let j=i+1;j<t.length;j++){
-   const a=t[i-1],b=t[i],c=t[j],d=t[(j+1)%t.length];
-   if(D[a][c]+D[b][d]<D[a][b]+D[c][d]-1e-9){t.splice(i,j-i+1,...t.slice(i,j+1).reverse());imp=true}
-  }}
- return t;
-}
-const len=(t,D)=>t.reduce((s,x,i)=>s+D[x][t[(i+1)%t.length]],0);
+function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
+ const n=P.length,NB=BUS.length,deadline=performance.now()+budgetMs;
+ if(n>31)throw Error('Поддерживается не больше 31 адреса.');
+ if(!NB)throw Error('Нет данных об остановках.');
+ const SPW=CF&&CF.SPW!=null?CF.SPW:1200,BAL=CF&&CF.BAL!=null?CF.BAL:150;
+ const ND=Math.max(1,Math.min(5,(CF&&CF.ND)||5)),WD={1:[0],2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,3,4]}[ND];
+ if(Math.max(...K)>ND)throw Error('У адреса больше визитов, чем дней.');
+ const D=P.map((a,i)=>P.map((b,j)=>i===j?0:hav(a,b)));
+ const SP=BUS.map(s=>P.map(p=>hav(p,s)));
+ const NS=P.map((_,i)=>{let bi=0,bd=Infinity;for(let b=0;b<NB;b++){if(SP[b][i]<bd){bd=SP[b][i];bi=b;}}return{dist:bd,bus:bi};});
+ const exactCache=new Map(),fastCache=new Map(),endpointCache=new Map();
 
-/* --- распределение по дням --- */
-function planWeek(D){
- const n=S.addrs.length,V=S.addrs.map(a=>a.v),K=S.addrs.map(a=>a.k),cache=new Map();
- const nb=S.addrs.map(a=>BUS.length?Math.min(...BUS.map(b=>hav(a,b))):0);
- const prox=s=>{
-  if(!s.length)return 0;
-  const key=s.join();if(cache.has(key))return cache.get(key);
-  const r=len(tsp(s,D),D);cache.set(key,r);return r;
- };
- const sets=[0,1,2,3,4].map(()=>new Set());
- const tv=K.reduce((a,b)=>a+b,0),cap=Math.min(CFG.MAXPTS,Math.ceil(tv/5));
- const cl=[0,1,2,3,4].map(()=>new Set());
- let med=[0];
- while(med.length<5&&med.length<n){
-  let bi=-1,bd=-1;
-  for(let i=0;i<n;i++){if(med.includes(i))continue;const d=Math.min(...med.map(m=>D[i][m]));if(d>bd){bd=d;bi=i}}
-  med.push(bi);
+ /* Для заданной остановки берём ближайший адрес дня. Благодаря этому
+    старт/финиш действительно являются адресами, ближайшими к остановке. */
+ /* Концами дня может быть любой адрес: цена конца = расстояние до ближайшей остановки.
+    Раньше концом мог быть только адрес, ближайший к какой-то остановке, и путь делал
+    лишний возврат через весь район, чтобы закончить рядом с остановкой. */
+ function endpointOptions(mask){
+  let z=endpointCache.get(mask);if(z)return z;
+  z=bits(mask).map(i=>({i,dist:NS[i].dist,bus:NS[i].bus}));
+  endpointCache.set(mask,z);return z;
  }
- while(med.length<5)med.push(med[0]);
- const byK=[...Array(n).keys()].sort((a,b)=>K[b]-K[a]);
- for(let rep=0;rep<8;rep++){
-  cl.forEach(c=>c.clear());
-  byK.forEach(i=>{
-   const ord=[0,1,2,3,4].sort((p,q)=>D[i][med[p]]-D[i][med[q]]);let got=0;
-   for(const c of ord)if(got<K[i]&&cl[c].size<cap){cl[c].add(i);got++}
-   for(const c of ord)if(got<K[i]&&!cl[c].has(i)){cl[c].add(i);got++}
-  });
-  med=cl.map((c,x)=>{const m=[...c];if(!m.length)return med[x];
-   const sm=i=>m.reduce((s,j)=>s+D[i][j],0);return m.reduce((b,i)=>sm(i)<sm(b)?i:b,m[0])});
- }
- const perms=[];
- const pm=(a,r=[])=>{if(!a.length)perms.push(r);a.forEach((x,i)=>pm(a.filter((_,j)=>j!==i),[...r,x]))};
- pm([0,1,2,3,4]);
- const pen=p=>{let s=0;
-  for(let i=0;i<n;i++){
-   if(K[i]<2||K[i]>3)continue;
-   const ds=[0,1,2,3,4].filter(c=>cl[c].has(i)).map(c=>p.indexOf(c)).sort((a,b)=>a-b);let m=9;
-   for(let x=1;x<ds.length;x++)m=Math.min(m,ds[x]-ds[x-1]);
-   if(m<2)s++;
-  }return s};
- const bp=perms.reduce((b,p)=>pen(p)<pen(b)?p:b,perms[0]);
- bp.forEach((c,d)=>cl[c].forEach(i=>sets[d].add(i)));
- for(let d=0;d<5;d++)while(sets[d].size>CFG.MAXPTS){
-  let moved=false;
-  for(const i of sets[d]){
-   if(K[i]>=5)continue;
-   const b=[0,1,2,3,4].filter(x=>!sets[x].has(i)&&sets[x].size<CFG.MAXPTS)[0];
-   if(b!==undefined){sets[d].delete(i);sets[b].add(i);moved=true;break}
-  }
-  if(!moved)break;
- }
- const arr=d=>[...sets[d]].sort((a,b)=>a-b);
- const T=[0,1,2,3,4].map(d=>prox(arr(d)));
- const sp=i=>{ // штраф, если 2-3 визита идут в соседние дни
-  if(K[i]<2||K[i]>3)return 0;
-  const ds=[0,1,2,3,4].filter(d=>sets[d].has(i));let m=9;
-  for(let x=1;x<ds.length;x++)m=Math.min(m,ds[x]-ds[x-1]);
-  return m<2?15:0;
- };
- const cnt=()=>sets.map(s=>s.size);
- const score=()=>T.reduce((a,b)=>a+b,0)+6*(Math.max(...cnt())-Math.min(...cnt()))+[...Array(n).keys()].reduce((a,i)=>a+sp(i),0);
- let cur=score();
- for(let it=0;it<12000&&n>1;it++){
-  const i=Math.floor(Math.random()*n);if(K[i]>=5)continue;
-  const ins=[0,1,2,3,4].filter(d=>sets[d].has(i)),outs=[0,1,2,3,4].filter(d=>!sets[d].has(i));
-  const a=ins[Math.floor(Math.random()*ins.length)],b=outs[Math.floor(Math.random()*outs.length)];
-  let j=-1;
-  if(Math.random()<0.6){const c=[...sets[b]].filter(x=>K[x]<5&&!sets[a].has(x));if(c.length)j=c[Math.floor(Math.random()*c.length)]}
-  if(j<0&&sets[b].size>=CFG.MAXPTS)continue;
-  sets[a].delete(i);sets[b].add(i);
-  if(j>=0){sets[b].delete(j);sets[a].add(j)}
-  const ta=T[a],tb=T[b];T[a]=prox(arr(a));T[b]=prox(arr(b));
-  const s=score();
-  if(s<cur-1e-9)cur=s;
-  else{sets[b].delete(i);sets[a].add(i);if(j>=0){sets[a].delete(j);sets[b].add(j)}T[a]=ta;T[b]=tb}
- }
- const wm=i=>nb[i]/CFG.SPEED/60;
- const final=set=>{
-  if(!set.length)return null;
-  const t=tsp(set,D);
-  if(t.length<2)return{order:t};
-  const L=len(t,D);let bk=0,bc=1e18;
-  t.forEach((a,k)=>{const b=t[(k+1)%t.length],c=L-D[a][b]+wm(a)+wm(b);if(c<bc){bc=c;bk=k}});
-  return{order:[...t.slice(bk+1),...t.slice(0,bk+1)]};
- };
- return[0,1,2,3,4].map(d=>({set:arr(d),f:final(arr(d))}));
-}
 
-/* --- новый расчёт: детерминированный, с точным порядком обхода внутри дня --- */
-function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);
- t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function hkPath(set,D,wm){ // точный кратчайший открытый путь, учитывает близость концов к остановкам
- const m=set.length;
- if(m<3)return set.slice();
- if(m>13)return tsp(set,D);
- const F=1<<m,dp=new Float64Array(F*m).fill(1e18),par=new Int8Array(F*m).fill(-1);
- for(let i=0;i<m;i++)dp[(1<<i)*m+i]=wm(set[i]);
- for(let s=1;s<F;s++)for(let j=0;j<m;j++){
-  const c=dp[s*m+j];if(c>=1e18||!(s&(1<<j)))continue;
-  for(let k=0;k<m;k++){
-   if(s&(1<<k))continue;
-   const ns=s|(1<<k),v=c+D[set[j]][set[k]];
-   if(v<dp[ns*m+k]){dp[ns*m+k]=v;par[ns*m+k]=j}
+ /* Точный открытый TSP + точный выбор остановок/концов. */
+ function exact(mask){
+  let z=exactCache.get(mask);if(z)return z;
+  const ids=bits(mask),m=ids.length;
+  if(!m){z={cost:0,order:[],start:-1,end:-1,bs:-1,be:-1};exactCache.set(mask,z);return z;}
+  const ends=endpointOptions(mask);
+  if(m===1){const e=ends.find(x=>x.i===ids[0]);z={cost:2*e.dist,order:[ids[0]],start:ids[0],end:ids[0],bs:e.bus,be:e.bus};exactCache.set(mask,z);return z;}
+  const ep=new Array(n);for(const e of ends)ep[e.i]=e;
+  const F=1<<m,W=m,INF=1e100,dp=new Float64Array(F*W),par=new Int8Array(F*W);
+  dp.fill(INF);par.fill(-1);
+  for(let a=0;a<m;a++){const e=ep[ids[a]];if(e)dp[(1<<a)*W+a]=e.dist;}
+  for(let s=1;s<F;s++){
+   const row=s*W;
+   for(let a=0;a<m;a++){
+    const q=dp[row+a];if(q>=INF||!(s&(1<<a)))continue;
+    let remMask=(F-1)^s;
+    while(remMask){const bit=remMask&-remMask,b=31-Math.clz32(bit),ns=s|bit,ix=ns*W+b,v=q+D[ids[a]][ids[b]];if(v<dp[ix]-1e-9){dp[ix]=v;par[ix]=a;}remMask-=bit;}
+   }
   }
+  const full=F-1;let best=INF,be=-1;
+  for(let a=0;a<m;a++){const e=ep[ids[a]];if(!e)continue;const v=dp[full*W+a]+e.dist;if(v<best-1e-9||(Math.abs(v-best)<=1e-9&&(be<0||ids[a]<ids[be]))){best=v;be=a;}}
+  const rev=[];let s=full,a=be;while(a>=0){rev.push(ids[a]);const pa=par[s*W+a];s^=1<<a;a=pa;}
+  const order=rev.reverse(),se=ep[order[0]],ee=ep[order[order.length-1]];
+  z={cost:best,order,start:order[0],end:order[order.length-1],bs:se.bus,be:ee.bus};exactCache.set(mask,z);return z;
  }
- let bj=0,bc=1e18;
- for(let j=0;j<m;j++){const v=dp[(F-1)*m+j]+wm(set[j]);if(v<bc){bc=v;bj=j}}
- const o=[];let s=F-1,j=bj;
- while(j>=0){o.push(set[j]);const p=par[s*m+j];s^=1<<j;j=p}
- return o.reverse();
-}
-function planWeek2(D){
- const n=S.addrs.length,K=S.addrs.map(a=>a.k),cap=CFG.MAXPTS,cache=new Map();
- const nb=S.addrs.map(a=>BUS.length?Math.min(...BUS.map(b=>hav(a,b))):0),wm=i=>nb[i]/CFG.SPEED/60;
- const arr=s=>[...s].sort((a,b)=>a-b);
- const cost=s=>{ // длина обхода дня + штраф за переходы длиннее 15 мин
-  if(s.length<2)return 0;
-  const key=s.join();let r=cache.get(key);if(r!==undefined)return r;
-  const t=tsp(s,D);r=len(t,D);
-  t.forEach((x,k)=>{const w=D[x][t[(k+1)%t.length]];if(w>15)r+=2*(w-15)});
-  if(cache.size>150000)cache.clear();
-  cache.set(key,r);return r;
- };
- function run(seed){
-  const R=rng(seed),sets=[0,1,2,3,4].map(()=>new Set()),T=[0,0,0,0,0];
-  const med=[Math.floor(R()*n)];
-  while(med.length<Math.min(5,n)){
-   let bi=0,bd=-1;
-   for(let i=0;i<n;i++){if(med.includes(i))continue;const d=Math.min(...med.map(m=>D[i][m]));if(d>bd){bd=d;bi=i}}
-   med.push(bi);
+ function exactTotal(ms){let s=0;for(const m of ms)s+=exact(m).cost;return s;}
+
+ /* Быстрый детерминированный TSP-оценщик для сортировки кандидатов. */
+ function fast(mask){
+  let z=fastCache.get(mask);if(z!==undefined)return z;
+  const ids=bits(mask),m=ids.length;if(!m){fastCache.set(mask,0);return 0;}
+  const nearest=ids.map(i=>Math.min(...SP.map(r=>r[i])));
+  if(m===1){const v=2*nearest[0];fastCache.set(mask,v);return v;}
+  let best=Infinity;
+  const starts=ids.slice().sort((a,b)=>nearest[ids.indexOf(a)]-nearest[ids.indexOf(b)]||a-b).slice(0,5);
+  for(const s0 of starts){
+   const o=[s0],left=ids.filter(i=>i!==s0);
+   while(left.length){let bi=0,bv=Infinity;for(let j=0;j<left.length;j++){const q=D[o[o.length-1]][left[j]];if(q<bv-1e-9||(Math.abs(q-bv)<=1e-9&&left[j]<left[bi])){bv=q;bi=j;}}o.push(left.splice(bi,1)[0]);}
+   for(let p=0;p<4;p++){
+    let ch=false;
+    for(let i=0;i<o.length-2;i++)for(let j=i+1;j<o.length-1;j++){
+      const a=o[i],b=o[i+1],c=o[j],d=o[j+1];
+      if(D[a][c]+D[b][d]<D[a][b]+D[c][d]-1e-7){for(let l=i+1,r=j;l<r;l++,r--){const t=o[l];o[l]=o[r];o[r]=t;}ch=true;}
+    }
+    if(!ch)break;
+   }
+   let c=nearest[ids.indexOf(o[0])]+nearest[ids.indexOf(o[o.length-1])];
+   for(let i=1;i<o.length;i++)c+=D[o[i-1]][o[i]];
+   best=Math.min(best,c);
   }
-  while(med.length<5)med.push(med[0]);
-  const c0=Math.min(cap,Math.ceil(K.reduce((a,b)=>a+b,0)/5));
-  [...Array(n).keys()].sort((a,b)=>K[b]-K[a]||R()-.5).forEach(i=>{
-   const ord=[0,1,2,3,4].sort((p,q)=>D[i][med[p]]-D[i][med[q]]);let g=0;
-   for(const c of ord)if(g<K[i]&&sets[c].size<c0){sets[c].add(i);g++}
-   for(const c of ord)if(g<K[i]&&!sets[c].has(i)){sets[c].add(i);g++}
-  });
-  const C=d=>cost(arr(sets[d]));
-  const sp=i=>{ // небольшой штраф, если 2-3 визита идут в соседние дни
-   if(K[i]<2||K[i]>3)return 0;
-   const ds=[];for(let d=0;d<5;d++)if(sets[d].has(i))ds.push(d);
-   let m=9;for(let x=1;x<ds.length;x++)m=Math.min(m,ds[x]-ds[x-1]);
-   return m<2?3:0;
-  };
-  const E=()=>{
-   let s=0,mx=-1,mn=1e9;
-   for(let d=0;d<5;d++){s+=T[d];const z=sets[d].size;mx=Math.max(mx,z);mn=Math.min(mn,z);if(!z)s+=50}
-   for(let i=0;i<n;i++)s+=sp(i);
-   return s+(mx-mn);
-  };
-  for(let d=0;d<5;d++)T[d]=C(d);
-  let cur=E(),best=cur,bestS=sets.map(s=>new Set(s));
-  const N=20000;
-  for(let it=0;it<N&&n>1;it++){
-   const tp=20*Math.pow(0.0025,it/N);
-   const i=Math.floor(R()*n);if(K[i]>=5)continue;
-   const ins=[],outs=[];
-   for(let d=0;d<5;d++)(sets[d].has(i)?ins:outs).push(d);
-   const a=ins[Math.floor(R()*ins.length)],b=outs[Math.floor(R()*outs.length)];
-   let j=-1;
-   if(R()<0.5){const c=[...sets[b]].filter(x=>K[x]<5&&!sets[a].has(x));if(c.length)j=c[Math.floor(R()*c.length)]}
-   if(j<0&&sets[b].size>=cap)continue;
-   sets[a].delete(i);sets[b].add(i);
-   if(j>=0){sets[b].delete(j);sets[a].add(j)}
-   const ta=T[a],tb=T[b];T[a]=C(a);T[b]=C(b);
-   const e=E(),dE=e-cur;
-   if(dE<=0||R()<Math.exp(-dE/tp)){cur=e;if(e<best){best=e;bestS=sets.map(s=>new Set(s))}}
-   else{sets[b].delete(i);sets[a].add(i);if(j>=0){sets[a].delete(j);sets[b].add(j)}T[a]=ta;T[b]=tb}
-  }
-  return{E:best,sets:bestS};
+  fastCache.set(mask,best);return best;
  }
- let h=7;S.addrs.forEach(a=>{for(const ch of a.t+a.k)h=(h*31+ch.charCodeAt(0))|0});
+ function fastTotal(ms){let s=0;for(const m of ms)s+=fast(m);return s;}
+
+
+
+ /* ===== Недельные шаблоны: адрес с k визитами получает набор из k разных дней недели ===== */
+ const subs=k=>{const o=[];for(let m=1;m<(1<<ND);m++)if(pop(m)===k)o.push(m);return o;};
+ const adjc=m=>{let c=0;for(let d=0;d<ND-1;d++)if((m>>d&1)&&(m>>(d+1)&1)&&WD[d+1]-WD[d]===1)c++;return c;};
+ const PAT=K.map(k=>subs(Math.max(1,Math.min(ND,k))));
+ /* штраф за визиты в соседние дни сверх неизбежного минимума (для 3 визитов это Пн/Ср/Пт) */
+ const PEN=PAT.map(l=>{const mn=Math.min(...l.map(adjc));return l.map(m=>SPW*(adjc(m)-mn));});
+ const dayMasks=pat=>{const dm=Array(ND).fill(0);for(let i=0;i<n;i++){const m=PAT[i][pat[i]];for(let d=0;d<ND;d++)if(m>>d&1)dm[d]|=1<<i;}return dm;};
+ const imb=dm=>{const c=dm.map(pop);return BAL*Math.max(0,Math.max(...c)-Math.min(...c)-2);};
+ const penTot=pat=>{let s=0;for(let i=0;i<n;i++)s+=PEN[i][pat[i]];return s;};
+ const capOk=dm=>dm.every(m=>pop(m)<=CAP);
+ const mkRnd=seed=>{let x=seed|0;return()=>{x|=0;x=(Math.imul(x^x>>>13,1274126177)+0x6D2B79F5)|0;return((x^x>>>16)>>>0)/4294967296;};};
+
+ function initPat(rnd){
+  const load=Array(ND).fill(0),pat=Array(n).fill(0);
+  const ord=[...Array(n).keys()].sort((a,b)=>K[b]-K[a]||rnd()-.5);
+  for(const i of ord){
+   let bi=0,bv=Infinity;
+   PAT[i].forEach((m,q)=>{
+    let mx=0,ok=true;
+    for(let d=0;d<ND;d++)if(m>>d&1){if(load[d]+1>CAP)ok=false;mx=Math.max(mx,load[d]+1);}
+    const v=(ok?0:1e6)+mx*1000+PEN[i][q]+rnd();
+    if(v<bv){bv=v;bi=q;}
+   });
+   pat[i]=bi;for(let d=0;d<ND;d++)if(PAT[i][bi]>>d&1)load[d]++;
+  }
+  return pat;
+ }
+ function sa(seed,steps,start){
+  const rnd=mkRnd(seed);
+  let pat=start.slice(),dm=dayMasks(pat),cur=fastTotal(dm)+penTot(pat)+imb(dm),best={e:cur,pat:pat.slice()};
+  const idx=[];for(let i=0;i<n;i++)if(PAT[i].length>1)idx.push(i);
+  for(let it=0;it<steps&&idx.length&&performance.now()<deadline;it++){
+   const temp=500*Math.pow(0.01,it/steps);
+   const i=idx[Math.floor(rnd()*idx.length)],old=pat[i];
+   let q=Math.floor(rnd()*(PAT[i].length-1));if(q>=old)q++;
+   pat[i]=q;
+   const nd=dayMasks(pat);
+   if(!capOk(nd)){pat[i]=old;continue;}
+   const e=fastTotal(nd)+penTot(pat)+imb(nd),d=e-cur;
+   if(d<=0||rnd()<Math.exp(-d/temp)){cur=e;if(e<best.e-1e-7)best={e,pat:pat.slice()};}
+   else pat[i]=old;
+  }
+  return best;
+ }
+ /* точная доводка: меняем шаблон одного адреса, пока это уменьшает точную стоимость */
+ function polish(p0){
+  const pat=p0.slice();
+  const En=(p,ex)=>{const d=dayMasks(p);return capOk(d)?(ex?exactTotal(d):fastTotal(d))+penTot(p)+imb(d):Infinity;};
+  let cur=En(pat,true);
+  const moves=[];for(let i=0;i<n;i++)for(let q=0;q<PAT[i].length;q++)moves.push([i,q]);
+  for(let rd=0;rd<60;rd++){
+   let bi=-1,bq=-1,be=cur;
+   for(const [i,q] of moves){
+    if(q===pat[i])continue;
+    const o=pat[i];pat[i]=q;const e=En(pat,true);pat[i]=o;
+    if(e<be-1e-7){be=e;bi=i;bq=q;}
+   }
+   if(bi>=0){pat[bi]=bq;cur=be;continue;}
+   /* пары одновременных изменений: сначала дешёвая оценка, затем точная проверка лучших */
+   const cand=[];
+   for(let a=0;a<moves.length;a++){
+    const [i,q]=moves[a];if(q===pat[i])continue;
+    for(let b=a+1;b<moves.length;b++){
+     const [j,w]=moves[b];if(j===i||w===pat[j])continue;
+     const oi=pat[i],oj=pat[j];pat[i]=q;pat[j]=w;const e=En(pat,false);pat[i]=oi;pat[j]=oj;
+     if(e<Infinity)cand.push([e,i,q,j,w]);
+    }
+   }
+   cand.sort((x,y)=>x[0]-y[0]);
+   let hit=false;
+   for(let c=0;c<Math.min(60,cand.length);c++){
+    const [,i,q,j,w]=cand[c],oi=pat[i],oj=pat[j];pat[i]=q;pat[j]=w;
+    const e=En(pat,true);
+    if(e<cur-1e-7){cur=e;hit=true;break;}
+    pat[i]=oi;pat[j]=oj;
+   }
+   if(!hit)break;
+  }
+  return{e:cur,pat};
+ }
  let best=null;
- for(let r=0;r<6;r++){const x=run(h+r*7919);if(!best||x.E<best.E)best=x}
- return best.sets.map(s=>{const set=arr(s);return{set,f:set.length?{order:hkPath(set,D,wm)}:null}});
+ const STEPS=CF&&CF.STEPS||60000,RESTARTS=CF&&CF.RESTARTS||8;
+ for(let r=0;r<RESTARTS&&(r===0||performance.now()<deadline);r++){
+  const st=initPat(mkRnd(0x9e3779b1*(r+1)));
+  const s=sa(0x13579B+r*7919,STEPS,st),p=polish(s.pat);
+  if(!best||p.e<best.e-1e-7)best=p;
+ }
+ const dm=dayMasks(best.pat);
+ const days=dm.map(mask=>{
+  if(!mask)return{cnt:0,pts:[],legs:[],route:[],dist:0};
+  const z=exact(mask),pts=z.order.map(i=>P[i]),start=BUS[z.bs],finish=BUS[z.be];
+  return{cnt:pts.length,pts,legs:z.order.slice(1).map((j,k)=>({a:P[z.order[k]],b:P[j],w:D[z.order[k]][j]})),start,finish,startAddr:P[z.start],finishAddr:P[z.end],startDist:SP[z.bs][z.start],finishDist:SP[z.be][z.end],dist:z.cost,route:[start,...pts,finish]};
+ });
+ const out=[0,1,2,3,4].map(w=>{const s=WD.indexOf(w);return s<0?{cnt:0,pts:[],legs:[],route:[],dist:0}:days[s];});
+ return{days:out,total:exactTotal(dm),penalty:penTot(best.pat),energy:best.e,target:dm.map(pop)};
+}
+onmessage=e=>{try{const t=performance.now(),r=optimize(e.data.P,e.data.BUS,e.data.K,e.data.CAP,e.data.budgetMs,e.data.initialMasks,e.data.CF);postMessage({ok:true,result:r,elapsed:performance.now()-t});}catch(x){postMessage({ok:false,error:String(x&&x.message||x)});}};
+`;
+function runOptimizer(P,K,initialMasks,ND){return new Promise((resolve,reject)=>{const w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));let timer;const done=()=>{clearTimeout(timer);w.terminate();};w.onmessage=e=>{if(e.data&&e.data.type==='best')return;done();if(e.data&&e.data.ok)resolve(e.data);else reject(Error(e.data&&e.data.error||'Ошибка расчёта.'));};w.onerror=()=>{done();reject(Error('Ошибка фонового расчёта.'));};timer=setTimeout(()=>{done();reject(Error('Расчёт превысил лимит.'));},OPT_MS+5000);w.postMessage({P,BUS,K,CAP:CFG.MAXPTS,budgetMs:OPT_MS,initialMasks,CF:{SPW:CFG.SPW,BAL:CFG.BAL,ND}});});}
+$('#go').onclick=async()=>{
+ const n=S.addrs.length;if(n<1){$('#st').textContent='Добавьте хотя бы один адрес.';return;}
+ const K=S.addrs.map(a=>Math.max(1,Math.min(5,+a.k||1))),total=K.reduce((a,b)=>a+b,0);
+ if(total>5*CFG.MAXPTS){$('#st').textContent='Слишком много посещений для пяти маршрутов.';return;}
+ const maxK=Math.max(...K),need=Math.max(1,maxK,Math.ceil(total/CFG.MAXPTS)),sel=$('#dn').value,ND=sel==='auto'?need:+sel;
+ if(ND<need){$('#st').textContent='Для этих адресов нужно не меньше '+need+' дн.: у одного адреса до '+maxK+' визитов, а в день не больше '+CFG.MAXPTS+' точек.';return;}
+ try{localStorage.setItem('rp_days',sel);}catch(e){}
+ $('#go').disabled=true;$('#st').textContent='Оптимизирую…';
+ const initialMasks=(S.plan&&Array.isArray(S.plan.days))?S.plan.days.map(d=>{let m=0;for(const p of (d.pts||[])){const i=S.addrs.findIndex(a=>a.t===p.t);if(i>=0)m|=1<<i;}return m;}):null;try{const r=await runOptimizer(S.addrs,K,initialMasks,ND);S.plan={days:r.result.days,objective:r.result.total};save();show();$('#st').textContent='';document.title='Пеший планировщик';}
+ catch(e){console.error(e);$('#st').textContent='Не удалось завершить расчёт.';}
+ finally{$('#go').disabled=false;}
+};
+document.addEventListener('change',e=>{const d=e.target.dataset;if(d.k!==undefined){S.addrs[+d.k].k=+e.target.value;S.plan=null;save();lists();show();}});
+document.addEventListener('click',e=>{const d=e.target.dataset;if(d.da!==undefined){S.addrs.splice(+d.da,1);S.plan=null;save();lists();show();}});
+suggest($('#ai'),p=>{if(!S.addrs.some(a=>a.t===p.t))S.addrs.push({...p,k:1});S.plan=null;save();lists();show();});
+$('#ex').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='routes.json';a.click();};
+$('#im').onclick=()=>$('#fi').click();
+$('#fi').onchange=async e=>{try{const z=JSON.parse(await e.target.files[0].text());S.addrs=(z.addrs||[]).filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1))}));S.plan=null;save();lists();show();}catch(x){$('#st').textContent='Не удалось открыть файл.';}e.target.value='';};
+$('#sa').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S.addrs)],{type:'application/json'}));a.download='addresses.json';a.click();};
+$('#la').onclick=()=>$('#fa').click();
+$('#fa').onchange=async e=>{try{const L=JSON.parse(await e.target.files[0].text());if(!Array.isArray(L))throw 0;S.addrs=L.filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1))}));S.plan=null;save();lists();show();}catch(x){$('#st').textContent='Не удалось открыть файл адресов.';}e.target.value='';};
+
+function lists(){
+  const box=$('#al');
+  if(!S.addrs.length){box.innerHTML='';return;}
+  box.innerHTML=S.addrs.map((a,i)=>
+    '<div class="row">'+
+      '<span class="t">'+esc(a.t)+'</span>'+ 
+      '<select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option value="'+k+'"'+(k===a.k?' selected':'')+'>'+k+'</option>').join('')+'</select>'+ 
+      '<span class="m">раз в неделю</span>'+ 
+      '<button class="s" data-da="'+i+'">Удалить</button>'+ 
+    '</div>'
+  ).join('');
 }
 
-/* --- построение и вывод --- */
-$('#go').onclick=async()=>{
- const n=S.addrs.length;
- if(n<2){$('#st').textContent='Добавьте хотя бы два адреса.';return}
- const tv=S.addrs.reduce((a,x)=>a+x.k,0);
- if(tv>5*CFG.MAXPTS){$('#st').textContent='Визитов в неделю '+tv+', а помещается не больше '+5*CFG.MAXPTS+' ('+CFG.MAXPTS+' точек × 5 дней). Уменьшите частоту у части адресов.';return}
- $('#st').textContent='Считаю…';
- await new Promise(r=>setTimeout(r,30));
- const P=S.addrs,{D:D0,src}=await matrix(P);
- const D=D0.map((r,i)=>r.map((v,j)=>(v+D0[j][i])/2));
- const Dc=P.map(a=>P.map(b=>hav(a,b)*1.3/CFG.SPEED/60)),days=planWeek2(Dc),pt=i=>S.addrs[i];
- S.plan={src,days:days.map(d=>{
-  if(!d.f)return{vis:0,cnt:0,pts:[],legs:[]};
-  const o=d.f.order;
-  return{vis:0,cnt:d.set.length,pts:o.map(pt),
-   legs:o.slice(1).map((x,k)=>({a:pt(o[k]),b:pt(x),w:D[o[k]][x]}))};
- })};
- S.ov={};save();$('#st').textContent='';show();
-};
 function mapSvg(d){
- const A=S.addrs,xs=A.map(a=>a.lon),ys=A.map(a=>a.lat);
- const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
- const W=260,H=170,M=8,cs=Math.cos(y0*Math.PI/180);
- const s=Math.min((W-2*M)/Math.max((x1-x0)*cs,1e-6),(H-2*M)/Math.max(y1-y0,1e-6));
- const X=a=>(M+(a.lon-x0)*cs*s).toFixed(1),Y=a=>(H-M-(a.lat-y0)*s).toFixed(1);
- let g='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" style="max-width:100%;border:1px solid var(--bd);border-radius:6px;margin-top:6px">';
- A.forEach(a=>{g+='<circle cx="'+X(a)+'" cy="'+Y(a)+'" r="2.5" fill="var(--bd)"/>'});
- if(d.pts.length>1)g+='<polyline fill="none" stroke="var(--ac)" stroke-width="1.5" points="'+d.pts.map(a=>X(a)+','+Y(a)).join(' ')+'"/>';
- d.pts.forEach((a,k)=>{g+='<circle cx="'+X(a)+'" cy="'+Y(a)+'" r="4" fill="'+(k===0?'#16a34a':k===d.pts.length-1?'#dc2626':'var(--ac)')+'"/>'});
- return g+'</svg><div class="m">Серые точки: все адреса. Зелёная: старт, красная: финиш.</div>';
+  const route=d.route||[];if(!route.length)return '';
+  const pts=S.addrs||[];const xs=route.map(a=>a.lon),ys=route.map(a=>a.lat);let x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);const pad=0.0025;x0-=pad;x1+=pad;y0-=pad;y1+=pad;
+  const W=520,H=300,M=20,cs=Math.cos(((y0+y1)/2)*Math.PI/180);const s=Math.min((W-2*M)/Math.max((x1-x0)*cs,1e-9),(H-2*M)/Math.max(y1-y0,1e-9));const X=a=>M+(a.lon-x0)*cs*s,Y=a=>H-M-(a.lat-y0)*s;
+  let g='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" style="max-width:100%;height:auto;border:1px solid var(--bd);border-radius:8px;margin-top:10px;background:var(--bg)">';
+  pts.forEach(a=>{g+='<circle cx="'+X(a).toFixed(1)+'" cy="'+Y(a).toFixed(1)+'" r="2.4" fill="var(--bd)"/>';});
+  g+='<polyline fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="'+route.map(a=>X(a).toFixed(1)+','+Y(a).toFixed(1)).join(' ')+'"/>';
+  route.forEach((a,k)=>{const isStart=k===0,isFinish=k===route.length-1;g+='<circle cx="'+X(a).toFixed(1)+'" cy="'+Y(a).toFixed(1)+'" r="'+(isStart||isFinish?6:4)+'" fill="'+(isStart?'#16a34a':isFinish?'#dc2626':'var(--ac)')+'" stroke="var(--card)" stroke-width="1.5"/>';});
+  return g+'</svg><div class="m">Серые точки — адреса из списка. Цветная линия — порядок маршрута.</div>';
 }
 function show(){
- const p=S.plan;if(!p){$('#out').innerHTML='';return}
- let h='<div class="m" style="margin-top:12px">Пешие времена: '+esc(p.src)+'. Визитов за неделю: '+S.addrs.reduce((a,x)=>a+x.k,0)+', в среднем '+(S.addrs.reduce((a,x)=>a+x.k,0)/5).toFixed(1)+' точек в день из '+S.addrs.length+' адресов.</div>';
- p.days.forEach((d,i)=>{
-  let tot=d.vis,rows='';
-  if(d.pts.length===1)rows='<div class="row"><span class="t">'+esc(d.pts[0].t)+'</span></div>';
-  d.legs.forEach((l,k)=>{
-   const key=i+'-'+k,ov=S.ov[key],gain=ov!=null?l.w-ov:0,bus=ov!=null&&gain>=CFG.BUS_GAIN,eff=bus?ov:l.w;
-   tot+=eff;let x='';
-   if(l.w>=CFG.BUS_GAIN){
-    x='<a target="_blank" rel="noopener" href="'+yl([l.a,l.b],'mt')+'">автобусом в Яндекс Картах</a> '+
-     '<input class="n" type="number" min="0" placeholder="мин" value="'+(ov!=null?ov:'')+'" data-o="'+key+'">'+
-     (ov==null?' <span class="w">возможно, выгоднее автобусом</span>':bus?' выигрыш '+Math.round(gain)+' мин, едем':
-      ' <span class="w">выигрыш меньше '+CFG.BUS_GAIN+' мин, идём пешком</span>');
-   }
-   rows+='<div class="row"><span class="t">'+esc(l.a.t)+' → '+esc(l.b.t)+'</span><b>'+Math.round(eff)+' мин'+(bus?' (автобус)':'')+'</b>'+x+'</div>';
+  const p=S.plan;if(!p){$('#out').innerHTML='';return;}
+  let h='<div class="hint">Общее прямое расстояние за неделю: <b>'+fmtD(p.objective)+'</b> · дней: '+p.days.filter(d=>d.cnt).length+' · точек по дням: '+p.days.filter(d=>d.cnt).map(d=>d.cnt).join('/')+'</div>';
+  p.days.forEach((d,i)=>{
+    if(!d||!d.cnt){h+='<div class="m" style="margin:10px 0">'+DN[i]+': свободный день</div>';return;}
+    let rows='';
+    const far=a=>{let m=Infinity;S.addrs.forEach(b=>{if(b.t!==a.t)m=Math.min(m,hav(a,b));});return m;};
+    d.pts.forEach((a,k)=>{const w=k?d.legs[k-1].w:0,f=far(a);rows+='<div class="row"><span class="t">'+(k+1)+'. '+esc(a.t)+(k?' <span class="m">· '+fmtD(w)+' от предыдущей</span>':'')+(f>700?' <span class="w">· адрес стоит отдельно, ближайший другой адрес в '+fmtD(f)+'</span>':'')+'</span></div>';});
+    h+='<div class="card"><div class="row"><span class="t"><b>'+DN[i]+'</b> · '+d.cnt+' адресов</span><b class="total">'+fmtD(d.dist)+'</b></div>'+
+      '<div class="m">Старт: '+esc(d.start?.t||'—')+' → '+esc(d.startAddr?.t||'—')+' ('+fmtD(d.startDist||0)+')</div>'+rows+
+      '<div class="m">Финиш: '+esc(d.finishAddr?.t||'—')+' → '+esc(d.finish?.t||'—')+' ('+fmtD(d.finishDist||0)+')</div>'+
+      mapSvg(d)+(d.route&&d.route.length>1?'<div class="m" style="margin-top:8px"><a target="_blank" rel="noopener" href="'+yl(d.route)+'">Открыть маршрут в Яндекс Картах</a></div>':'')+
+      '</div>';
   });
-  h+='<div class="card"><b>'+DN[i]+'</b>: '+hm(tot)+', адресов: '+d.cnt+
-   
-   (d.pts.length?'<div class="m">Старт: '+esc(d.pts[0].t)+nbs(d.pts[0])+'<br>Финиш: '+esc(d.pts[d.pts.length-1].t)+nbs(d.pts[d.pts.length-1])+'</div>':'')+
-   rows+(d.pts.length?mapSvg(d):'')+(d.pts.length>1?'<div class="m"><a target="_blank" rel="noopener" href="'+yl(d.pts,'pd')+'">весь день пешком в Яндекс Картах</a></div>':'')+'</div>';
- });
- $('#out').innerHTML=h;
+  $('#out').innerHTML=h;
 }
 
-/* --- списки и ввод --- */
-function lists(){
- $('#hl').textContent=S.home?S.home.t:'не задан';
- $('#bl').textContent=BUS.length?'Загружено остановок: '+BUS.length:'Остановки не загружены';
- const md=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],c0={lat:md(S.addrs.map(a=>a.lat)),lon:md(S.addrs.map(a=>a.lon))};
- $('#al').innerHTML=S.addrs.map((a,i)=>'<div class="row"><span class="t">'+esc(a.t)+(S.addrs.length>2&&hav(a,c0)>15000?' <span class="w">(далеко от остальных, проверьте адрес)</span>':'')+'</span><select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option'+(k==a.k?' selected':'')+'>'+k+'</option>').join('')+'</select><span class="m">раз в неделю</span><button class="s" data-da="'+i+'">Удалить</button></div>').join('');
-}
-document.addEventListener('change',e=>{
- const t=e.target,d=t.dataset;
- if(d.k!==undefined)S.addrs[d.k].k=+t.value;
- else if(d.o!==undefined){if(t.value==='')delete S.ov[d.o];else S.ov[d.o]=+t.value;save();show();return}
- else return;
- save();
-});
-document.addEventListener('click',e=>{
- const d=e.target.dataset;
- if(d.da!==undefined)S.addrs.splice(d.da,1);
- else return;
- S.plan=null;save();lists();show();
-});
-suggest($('#hi'),p=>{S.home=p;save();lists()},true);
-suggest($('#ai'),p=>{if(!S.addrs.some(a=>a.t===p.t))S.addrs.push({...p,k:1});S.plan=null;save();lists();show()});
-$('#ex').onclick=()=>{const a=document.createElement('a');
- a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='routes.json';a.click()};
-$('#im').onclick=()=>$('#fi').click();
-$('#fi').onchange=async e=>{try{S=Object.assign({home:null,stops:[],addrs:[],ov:{},plan:null},JSON.parse(await e.target.files[0].text()));save();lists();show()}
- catch(x){$('#st').textContent='Не удалось прочитать файл.'}};
-if(!CFG.YKEY)$('#warn').innerHTML='<div class="card w">Вставьте ключ HTTP Геокодера в блок CFG в начале скрипта. Без него подсказки адресов не работают.</div>';
-/* --- остановки автобусов 36 и 228 из OpenStreetMap (Overpass) --- */
-let BUS=[];try{BUS=JSON.parse(localStorage.getItem('rpb')||'[]')}catch(e){}
-const nbs=p=>{
- if(!BUS.length)return '';
- let b=null,m=1e9;BUS.forEach(s=>{const d=hav(p,s);if(d<m){m=d;b=s}});
- return ' (до остановки «'+esc(b.t)+'» ≈ '+Math.round(m)+' м)';
-};
-async function loadBus(){
- $('#bl').textContent='Загружаю остановки из OpenStreetMap…';
- const q='[out:json][timeout:40];rel["route"~"bus|share_taxi"]["ref"~"^('+CFG.BUSREF+')$"]('+CFG.BBOX2+')->.r;(node(r.r:"platform");node(r.r:"stop");way(r.r:"platform"););out center tags;';
- try{
-  const r=await fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(q));
-  if(!r.ok)throw Error('Overpass вернул '+r.status);
-  const j=await r.json(),seen={};
-  BUS=j.elements.map(e=>({t:(e.tags&&e.tags.name)||'остановка',lat:e.lat!==undefined?e.lat:(e.center&&e.center.lat),lon:e.lon!==undefined?e.lon:(e.center&&e.center.lon)}))
-   .filter(s=>s.lat&&s.lon&&!seen[s.lat+','+s.lon]&&(seen[s.lat+','+s.lon]=1));
-  localStorage.setItem('rpb',JSON.stringify(BUS));
- }catch(e){$('#bl').innerHTML='<span class="w">Не удалось загрузить остановки: '+esc(e.message||e)+'</span>';return}
- lists();
- if(!BUS.length)$('#bl').innerHTML='<span class="w">В OpenStreetMap не найдены маршруты 36 и 228 в Твери. Старт и финиш дня подбираются без привязки к остановкам.</span>';
-}
-$('#bs').onclick=loadBus;
-
-/* --- отдельный файл со списком адресов --- */
-$('#sa').onclick=()=>{const a=document.createElement('a');
- a.href=URL.createObjectURL(new Blob([JSON.stringify(S.addrs)],{type:'application/json'}));a.download='addresses.json';a.click()};
-$('#la').onclick=()=>$('#fa').click();
-$('#fa').onchange=async e=>{
- try{
-  const L=JSON.parse(await e.target.files[0].text());if(!Array.isArray(L))throw 0;
-  S.addrs=L.filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1))}));
-  S.plan=null;save();lists();show();$('#st').textContent='Загружено адресов: '+S.addrs.length;
- }catch(x){$('#st').textContent='Не удалось прочитать файл адресов.'}
- e.target.value='';
-};
+try{const dv=localStorage.getItem('rp_days');if(dv)$('#dn').value=dv;}catch(e){}
 lists();show();
-if(!BUS.length)loadBus();
+
 </script></body></html>
