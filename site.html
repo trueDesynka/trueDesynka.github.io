@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Маршруты на неделю</title>
+<style>
+:root{--bg:#f6f7f5;--fg:#1d2420;--mut:#66706a;--card:#fff;--ac:#0f766e;--bd:#d8ddd9;--wr:#b45309}
+@media(prefers-color-scheme:dark){:root{--bg:#141917;--fg:#e6ebe8;--mut:#98a39c;--card:#1d2421;--ac:#4fd1c0;--bd:#33403a;--wr:#f0b45a}}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:880px;padding:16px;font:15px/1.45 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+h1{font-size:22px;margin:8px 0 4px}
+h2{font-size:16px;margin:26px 0 6px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}
+input,select,button{font:inherit;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+button{cursor:pointer;background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}
+button.s{background:var(--card);color:var(--fg);border-color:var(--bd);font-weight:400}
+.sg{position:relative}.sg input{width:100%}
+.dd{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card);border:1px solid var(--bd);border-radius:6px;max-height:260px;overflow:auto}
+.dd div{padding:8px 10px;cursor:pointer}.dd div:hover{background:var(--bg)}
+.row{display:flex;gap:8px;align-items:center;margin:5px 0;flex-wrap:wrap}
+.row .t{flex:1;min-width:200px}
+.m{color:var(--mut);font-size:13px}.w{color:var(--wr)}
+a{color:var(--ac)}input.n{width:68px}
+</style></head><body>
+<h1>Маршруты на неделю</h1>
+<div class="m">Пять пеших маршрутов (пн–пт): каждый адрес не чаще раза в день, нужное число раз в неделю.</div>
+<div id="warn"></div>
+
+<h2>Дом (старт)</h2>
+<div class="sg"><input id="hi" placeholder="Адрес дома, вместе с городом"></div>
+<div id="hl" class="m"></div>
+
+<h2>Остановки с прямым автобусом от дома</h2>
+<div class="m">Добавляйте адрес рядом с остановкой, до которой едете без пересадок, и время поездки в одну сторону.</div>
+<div class="sg"><input id="si" placeholder="Адрес рядом с остановкой"></div>
+<div id="sl"></div>
+
+<h2>Адреса для посещения</h2>
+<div class="sg"><input id="ai" placeholder="Начните вводить адрес и выберите из списка"></div>
+<div id="al"></div>
+
+<div class="row" style="margin-top:16px">
+<button id="go">Построить маршруты</button>
+<button class="s" id="ex">Экспорт</button>
+<button class="s" id="im">Импорт</button>
+<input type="file" id="fi" hidden accept=".json">
+</div>
+<div id="st" class="m"></div>
+<div id="out"></div>
+
+<script>
+/* ===== НАСТРОЙКИ: вставьте свои ключи ===== */
+const CFG={
+ YKEY:'',            // ключ HTTP Геокодера Яндекса
+ ORSKEY:'',          // ключ OpenRouteService
+ CITY:'Тверь',       // город для подсказок
+ BBOX:'35.75,56.78~36.05,56.92', // область поиска: lon,lat~lon,lat
+ VISIT:20,           // минут на одной точке по умолчанию
+ DAYMAX:480,         // предел длины дня, мин
+ BUS_GAIN:30,        // минимальный выигрыш автобуса, мин
+ SPEED:1.3           // м/с, запасная скорость ходьбы
+};
+/* ========================================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S={home:null,stops:[],addrs:[],ov:{},plan:null};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem('rp1')||'{}'))}catch(e){}
+const save=()=>localStorage.setItem('rp1',JSON.stringify(S));
+const DN=['Пн','Вт','Ср','Чт','Пт'];
+const hm=m=>Math.floor(m/60)+' ч '+Math.round(m%60)+' мин';
+const yl=(p,mode)=>'https://yandex.ru/maps/?rtext='+p.map(x=>x.lat+','+x.lon).join('~')+'&rtt='+mode;
+
+/* --- геокодер и выпадающие подсказки --- */
+async function geo(q,noCity){
+ if(!CFG.YKEY)throw Error('Нет ключа Геокодера в CONFIG');
+ const g=(noCity?'':CFG.CITY+', ')+q;
+ const r=await fetch('https://geocode-maps.yandex.ru/1.x/?format=json&results=5&lang=ru_RU&bbox='+CFG.BBOX+'&apikey='+CFG.YKEY+'&geocode='+encodeURIComponent(g));
+ if(!r.ok)throw Error('Геокодер вернул '+r.status);
+ const j=await r.json();
+ return j.response.GeoObjectCollection.featureMember.map(m=>{
+  const o=m.GeoObject,[lon,lat]=o.Point.pos.split(' ').map(Number);
+  return{t:o.metaDataProperty.GeocoderMetaData.text,lat,lon}});
+}
+function suggest(inp,pick,noCity){
+ const dd=document.createElement('div');dd.className='dd';inp.parentNode.appendChild(dd);let tm;
+ inp.addEventListener('input',()=>{
+  clearTimeout(tm);dd.innerHTML='';
+  if(inp.value.trim().length<4)return;
+  tm=setTimeout(async()=>{
+   try{
+    const L=await geo(inp.value.trim(),noCity);dd.innerHTML='';
+    if(!L.length)dd.innerHTML='<div class="m">Ничего не найдено</div>';
+    L.forEach(p=>{const d=document.createElement('div');d.textContent=p.t;
+     d.onclick=()=>{dd.innerHTML='';inp.value='';pick(p)};dd.appendChild(d)});
+   }catch(e){dd.innerHTML='<div class="w">'+esc(e.message)+'</div>'}
+  },500);
+ });
+ document.addEventListener('click',e=>{if(e.target!==inp)dd.innerHTML=''});
+}
+
+/* --- матрица пеших времен (мин) --- */
+const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r,
+ x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+async function matrix(P){
+ const key=P.map(p=>p.lat.toFixed(5)+','+p.lon.toFixed(5)).join(';');
+ try{const c=JSON.parse(localStorage.getItem('rpm')||'null');if(c&&c.key===key)return{D:c.D,src:'OpenRouteService (кэш)'}}catch(e){}
+ try{
+  if(!CFG.ORSKEY)throw 0;
+  const r=await fetch('https://api.openrouteservice.org/v2/matrix/foot-walking',{method:'POST',
+   headers:{'Content-Type':'application/json',Authorization:CFG.ORSKEY},
+   body:JSON.stringify({locations:P.map(p=>[p.lon,p.lat]),metrics:['duration']})});
+  if(!r.ok)throw 0;
+  const j=await r.json(),D=j.durations.map(r=>r.map(v=>v==null?999:v/60));
+  localStorage.setItem('rpm',JSON.stringify({key,D}));
+  return{D,src:'OpenRouteService'};
+ }catch(e){
+  return{D:P.map(a=>P.map(b=>hav(a,b)*1.3/CFG.SPEED/60)),src:'по прямой ×1.3 (ORS недоступен, время приблизительное)'};
+ }
+}
+
+/* --- обход точек: ближайший сосед + 2-opt, замкнутый маршрут из ids[0] --- */
+function tsp(ids,D){
+ if(ids.length<3)return ids.slice();
+ const left=ids.slice(1),t=[ids[0]];
+ while(left.length){
+  const l=t[t.length-1];let b=0;
+  for(let i=1;i<left.length;i++)if(D[l][left[i]]<D[l][left[b]])b=i;
+  t.push(left.splice(b,1)[0]);
+ }
+ let imp=true;
+ while(imp){imp=false;
+  for(let i=1;i<t.length-1;i++)for(let j=i+1;j<t.length;j++){
+   const a=t[i-1],b=t[i],c=t[j],d=t[(j+1)%t.length];
+   if(D[a][c]+D[b][d]<D[a][b]+D[c][d]-1e-9){t.splice(i,j-i+1,...t.slice(i,j+1).reverse());imp=true}
+  }}
+ return t;
+}
+const len=(t,D)=>t.reduce((s,x,i)=>s+D[x][t[(i+1)%t.length]],0);
+
+/* --- распределение по дням --- */
+function planWeek(D){
+ const n=S.addrs.length,ST=S.stops,V=S.addrs.map(a=>a.v),K=S.addrs.map(a=>a.k),cache=new Map();
+ const prox=s=>{
+  if(!s.length)return 0;
+  const key=s.join();if(cache.has(key))return cache.get(key);
+  const w=len(tsp(s,D),D),vis=s.reduce((a,i)=>a+V[i],0);
+  const ov=ST.length?Math.min(...ST.map((q,e)=>2*(q.min+Math.min(...s.map(i=>D[n+e][i]))))):0;
+  const r=w+vis+ov;cache.set(key,r);return r;
+ };
+ const sets=[0,1,2,3,4].map(()=>new Set());
+ const pats={2:[[0,3],[1,4]],3:[[0,2,4]]};
+ const ld=p=>p.reduce((a,d)=>a+sets[d].size,0);
+ [...Array(n).keys()].sort((a,b)=>K[b]-K[a]).forEach(i=>{
+  const k=K[i];let ds;
+  if(k>=5)ds=[0,1,2,3,4];
+  else if(pats[k])ds=pats[k].slice().sort((p,q)=>ld(p)-ld(q))[0];
+  else ds=[0,1,2,3,4].sort((p,q)=>sets[p].size-sets[q].size).slice(0,k);
+  ds.forEach(d=>sets[d].add(i));
+ });
+ const arr=d=>[...sets[d]].sort((a,b)=>a-b);
+ const T=[0,1,2,3,4].map(d=>prox(arr(d)));
+ const sp=i=>{ // штраф, если 2-3 визита идут в соседние дни
+  if(K[i]<2||K[i]>3)return 0;
+  const ds=[0,1,2,3,4].filter(d=>sets[d].has(i));let m=9;
+  for(let x=1;x<ds.length;x++)m=Math.min(m,ds[x]-ds[x-1]);
+  return m<2?15:0;
+ };
+ const score=()=>T.reduce((a,b)=>a+b,0)+(Math.max(...T)-Math.min(...T))+[...Array(n).keys()].reduce((a,i)=>a+sp(i),0);
+ let cur=score();
+ for(let it=0;it<4000&&n>1;it++){
+  const i=Math.floor(Math.random()*n);if(K[i]>=5)continue;
+  const ins=[0,1,2,3,4].filter(d=>sets[d].has(i)),outs=[0,1,2,3,4].filter(d=>!sets[d].has(i));
+  const a=ins[Math.floor(Math.random()*ins.length)],b=outs[Math.floor(Math.random()*outs.length)];
+  sets[a].delete(i);sets[b].add(i);
+  const ta=T[a],tb=T[b];T[a]=prox(arr(a));T[b]=prox(arr(b));
+  const s=score();
+  if(s<cur-1e-9)cur=s;else{sets[b].delete(i);sets[a].add(i);T[a]=ta;T[b]=tb}
+ }
+ const final=set=>{
+  if(!set.length)return null;
+  if(!ST.length){const o=tsp(set,D);return{e:-1,order:o,r:0}}
+  let best=null;
+  ST.forEach((s,e)=>{
+   const o=tsp([n+e,...set],D),c=len(o,D)+2*s.min;
+   if(!best||c<best.c)best={e,order:o,r:2*s.min,c};
+  });
+  return best;
+ };
+ return[0,1,2,3,4].map(d=>({set:arr(d),f:final(arr(d))}));
+}
+
+/* --- построение и вывод --- */
+$('#go').onclick=async()=>{
+ const n=S.addrs.length;
+ if(n<2){$('#st').textContent='Добавьте хотя бы два адреса.';return}
+ $('#st').textContent='Считаю…';
+ await new Promise(r=>setTimeout(r,30));
+ const P=[...S.addrs,...S.stops],{D:D0,src}=await matrix(P);
+ const D=D0.map((r,i)=>r.map((v,j)=>(v+D0[j][i])/2));
+ const days=planWeek(D),pt=i=>i<n?S.addrs[i]:S.stops[i-n],V=S.addrs.map(a=>a.v);
+ S.plan={src,days:days.map(d=>{
+  if(!d.f)return{depot:null,ride:0,vis:0,cnt:0,pts:[],legs:[]};
+  const o=d.f.order;
+  return{depot:d.f.e>=0?S.stops[d.f.e]:null,ride:d.f.r,vis:d.set.reduce((s,i)=>s+V[i],0),cnt:d.set.length,
+   pts:o.map(pt),legs:o.length<2?[]:o.map((x,k)=>({a:pt(x),b:pt(o[(k+1)%o.length]),w:D[x][o[(k+1)%o.length]]}))};
+ })};
+ S.ov={};save();$('#st').textContent='';show();
+};
+function show(){
+ const p=S.plan;if(!p){$('#out').innerHTML='';return}
+ let h='<div class="m" style="margin-top:12px">Пешие времена: '+esc(p.src)+'</div>';
+ p.days.forEach((d,i)=>{
+  let tot=d.vis+d.ride,rows='';
+  if(d.pts.length===1)rows='<div class="row"><span class="t">'+esc(d.pts[0].t)+'</span></div>';
+  d.legs.forEach((l,k)=>{
+   const key=i+'-'+k,ov=S.ov[key],gain=ov!=null?l.w-ov:0,bus=ov!=null&&gain>=CFG.BUS_GAIN,eff=bus?ov:l.w;
+   tot+=eff;let x='';
+   if(l.w>=CFG.BUS_GAIN){
+    x='<a target="_blank" rel="noopener" href="'+yl([l.a,l.b],'mt')+'">автобусом в Яндекс Картах</a> '+
+     '<input class="n" type="number" min="0" placeholder="мин" value="'+(ov!=null?ov:'')+'" data-o="'+key+'">'+
+     (ov==null?' <span class="w">возможно, выгоднее автобусом</span>':bus?' выигрыш '+Math.round(gain)+' мин, едем':
+      ' <span class="w">выигрыш меньше '+CFG.BUS_GAIN+' мин, идём пешком</span>');
+   }
+   rows+='<div class="row"><span class="t">'+esc(l.a.t)+' → '+esc(l.b.t)+'</span><b>'+Math.round(eff)+' мин'+(bus?' (автобус)':'')+'</b>'+x+'</div>';
+  });
+  h+='<div class="card"><b>'+DN[i]+'</b>: '+hm(tot)+', адресов: '+d.cnt+
+   (tot>CFG.DAYMAX?' <span class="w">дольше лимита дня</span>':'')+
+   (d.depot?'<div class="m">Дом → остановка «'+esc(d.depot.t)+'»: автобус '+d.depot.min+' мин в одну сторону'+
+    (S.home?' · <a target="_blank" rel="noopener" href="'+yl([S.home,d.depot],'mt')+'">в Яндекс Картах</a>':'')+'</div>':'')+
+   rows+(d.pts.length>1?'<div class="m"><a target="_blank" rel="noopener" href="'+yl(d.pts,'pd')+'">весь день пешком в Яндекс Картах</a></div>':'')+'</div>';
+ });
+ $('#out').innerHTML=h;
+}
+
+/* --- списки и ввод --- */
+function lists(){
+ $('#hl').textContent=S.home?S.home.t:'не задан';
+ $('#sl').innerHTML=S.stops.map((s,i)=>'<div class="row"><span class="t">'+esc(s.t)+'</span><input class="n" type="number" min="0" value="'+s.min+'" data-s="'+i+'"><span class="m">мин в одну сторону</span><button class="s" data-ds="'+i+'">Удалить</button></div>').join('');
+ $('#al').innerHTML=S.addrs.map((a,i)=>'<div class="row"><span class="t">'+esc(a.t)+'</span><select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option'+(k==a.k?' selected':'')+'>'+k+'</option>').join('')+'</select><span class="m">раз в неделю</span><input class="n" type="number" min="0" value="'+a.v+'" data-v="'+i+'"><span class="m">мин на точке</span><button class="s" data-da="'+i+'">Удалить</button></div>').join('');
+}
+document.addEventListener('change',e=>{
+ const t=e.target,d=t.dataset;
+ if(d.s!==undefined)S.stops[d.s].min=+t.value;
+ else if(d.k!==undefined)S.addrs[d.k].k=+t.value;
+ else if(d.v!==undefined)S.addrs[d.v].v=+t.value;
+ else if(d.o!==undefined){if(t.value==='')delete S.ov[d.o];else S.ov[d.o]=+t.value;save();show();return}
+ else return;
+ save();
+});
+document.addEventListener('click',e=>{
+ const d=e.target.dataset;
+ if(d.ds!==undefined)S.stops.splice(d.ds,1);
+ else if(d.da!==undefined)S.addrs.splice(d.da,1);
+ else return;
+ S.plan=null;save();lists();show();
+});
+suggest($('#hi'),p=>{S.home=p;save();lists()},true);
+suggest($('#si'),p=>{S.stops.push({...p,min:15});S.plan=null;save();lists();show()});
+suggest($('#ai'),p=>{if(!S.addrs.some(a=>a.t===p.t))S.addrs.push({...p,k:1,v:CFG.VISIT});S.plan=null;save();lists();show()});
+$('#ex').onclick=()=>{const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='routes.json';a.click()};
+$('#im').onclick=()=>$('#fi').click();
+$('#fi').onchange=async e=>{try{S=Object.assign({home:null,stops:[],addrs:[],ov:{},plan:null},JSON.parse(await e.target.files[0].text()));save();lists();show()}
+ catch(x){$('#st').textContent='Не удалось прочитать файл.'}};
+if(!CFG.YKEY)$('#warn').innerHTML='<div class="card w">Вставьте ключ HTTP Геокодера в блок CFG в начале скрипта. Без него подсказки адресов не работают.</div>';
+lists();show();
+</script></body></html>
