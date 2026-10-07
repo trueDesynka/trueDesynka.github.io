@@ -328,18 +328,30 @@ $('#go').onclick=async()=>{
  await new Promise(r=>setTimeout(r,30));
  const P=S.addrs,{D:D0,src}=await matrix(P);
  const D=D0.map((r,i)=>r.map((v,j)=>(v+D0[j][i])/2));
- const days=planWeek2(D),pt=i=>S.addrs[i],V=S.addrs.map(a=>a.v);
+ const Dc=P.map(a=>P.map(b=>hav(a,b)*1.3/CFG.SPEED/60)),days=planWeek2(Dc),pt=i=>S.addrs[i];
  S.plan={src,days:days.map(d=>{
   if(!d.f)return{vis:0,cnt:0,pts:[],legs:[]};
   const o=d.f.order;
-  return{vis:d.set.reduce((s,i)=>s+V[i],0),cnt:d.set.length,pts:o.map(pt),
+  return{vis:0,cnt:d.set.length,pts:o.map(pt),
    legs:o.slice(1).map((x,k)=>({a:pt(o[k]),b:pt(x),w:D[o[k]][x]}))};
  })};
  S.ov={};save();$('#st').textContent='';show();
 };
+function mapSvg(d){
+ const A=S.addrs,xs=A.map(a=>a.lon),ys=A.map(a=>a.lat);
+ const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+ const W=260,H=170,M=8,cs=Math.cos(y0*Math.PI/180);
+ const s=Math.min((W-2*M)/Math.max((x1-x0)*cs,1e-6),(H-2*M)/Math.max(y1-y0,1e-6));
+ const X=a=>(M+(a.lon-x0)*cs*s).toFixed(1),Y=a=>(H-M-(a.lat-y0)*s).toFixed(1);
+ let g='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" style="max-width:100%;border:1px solid var(--bd);border-radius:6px;margin-top:6px">';
+ A.forEach(a=>{g+='<circle cx="'+X(a)+'" cy="'+Y(a)+'" r="2.5" fill="var(--bd)"/>'});
+ if(d.pts.length>1)g+='<polyline fill="none" stroke="var(--ac)" stroke-width="1.5" points="'+d.pts.map(a=>X(a)+','+Y(a)).join(' ')+'"/>';
+ d.pts.forEach((a,k)=>{g+='<circle cx="'+X(a)+'" cy="'+Y(a)+'" r="4" fill="'+(k===0?'#16a34a':k===d.pts.length-1?'#dc2626':'var(--ac)')+'"/>'});
+ return g+'</svg><div class="m">Серые точки: все адреса. Зелёная: старт, красная: финиш.</div>';
+}
 function show(){
  const p=S.plan;if(!p){$('#out').innerHTML='';return}
- let h='<div class="m" style="margin-top:12px">Пешие времена: '+esc(p.src)+'</div>';
+ let h='<div class="m" style="margin-top:12px">Пешие времена: '+esc(p.src)+'. Визитов за неделю: '+S.addrs.reduce((a,x)=>a+x.k,0)+', в среднем '+(S.addrs.reduce((a,x)=>a+x.k,0)/5).toFixed(1)+' точек в день из '+S.addrs.length+' адресов.</div>';
  p.days.forEach((d,i)=>{
   let tot=d.vis,rows='';
   if(d.pts.length===1)rows='<div class="row"><span class="t">'+esc(d.pts[0].t)+'</span></div>';
@@ -357,7 +369,7 @@ function show(){
   h+='<div class="card"><b>'+DN[i]+'</b>: '+hm(tot)+', адресов: '+d.cnt+
    
    (d.pts.length?'<div class="m">Старт: '+esc(d.pts[0].t)+nbs(d.pts[0])+'<br>Финиш: '+esc(d.pts[d.pts.length-1].t)+nbs(d.pts[d.pts.length-1])+'</div>':'')+
-   rows+(d.pts.length>1?'<div class="m"><a target="_blank" rel="noopener" href="'+yl(d.pts,'pd')+'">весь день пешком в Яндекс Картах</a></div>':'')+'</div>';
+   rows+(d.pts.length?mapSvg(d):'')+(d.pts.length>1?'<div class="m"><a target="_blank" rel="noopener" href="'+yl(d.pts,'pd')+'">весь день пешком в Яндекс Картах</a></div>':'')+'</div>';
  });
  $('#out').innerHTML=h;
 }
@@ -366,12 +378,12 @@ function show(){
 function lists(){
  $('#hl').textContent=S.home?S.home.t:'не задан';
  $('#bl').textContent=BUS.length?'Загружено остановок: '+BUS.length:'Остановки не загружены';
- $('#al').innerHTML=S.addrs.map((a,i)=>'<div class="row"><span class="t">'+esc(a.t)+'</span><select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option'+(k==a.k?' selected':'')+'>'+k+'</option>').join('')+'</select><span class="m">раз в неделю</span><input class="n" type="number" min="0" value="'+a.v+'" data-v="'+i+'"><span class="m">мин на точке</span><button class="s" data-da="'+i+'">Удалить</button></div>').join('');
+ const md=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],c0={lat:md(S.addrs.map(a=>a.lat)),lon:md(S.addrs.map(a=>a.lon))};
+ $('#al').innerHTML=S.addrs.map((a,i)=>'<div class="row"><span class="t">'+esc(a.t)+(S.addrs.length>2&&hav(a,c0)>15000?' <span class="w">(далеко от остальных, проверьте адрес)</span>':'')+'</span><select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option'+(k==a.k?' selected':'')+'>'+k+'</option>').join('')+'</select><span class="m">раз в неделю</span><button class="s" data-da="'+i+'">Удалить</button></div>').join('');
 }
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset;
  if(d.k!==undefined)S.addrs[d.k].k=+t.value;
- else if(d.v!==undefined)S.addrs[d.v].v=+t.value;
  else if(d.o!==undefined){if(t.value==='')delete S.ov[d.o];else S.ov[d.o]=+t.value;save();show();return}
  else return;
  save();
@@ -383,7 +395,7 @@ document.addEventListener('click',e=>{
  S.plan=null;save();lists();show();
 });
 suggest($('#hi'),p=>{S.home=p;save();lists()},true);
-suggest($('#ai'),p=>{if(!S.addrs.some(a=>a.t===p.t))S.addrs.push({...p,k:1,v:CFG.VISIT});S.plan=null;save();lists();show()});
+suggest($('#ai'),p=>{if(!S.addrs.some(a=>a.t===p.t))S.addrs.push({...p,k:1});S.plan=null;save();lists();show()});
 $('#ex').onclick=()=>{const a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='routes.json';a.click()};
 $('#im').onclick=()=>$('#fi').click();
@@ -420,7 +432,7 @@ $('#la').onclick=()=>$('#fa').click();
 $('#fa').onchange=async e=>{
  try{
   const L=JSON.parse(await e.target.files[0].text());if(!Array.isArray(L))throw 0;
-  S.addrs=L.filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1)),v:+x.v||CFG.VISIT}));
+  S.addrs=L.filter(x=>x&&x.t&&isFinite(x.lat)&&isFinite(x.lon)).map(x=>({t:x.t,lat:+x.lat,lon:+x.lon,k:Math.min(5,Math.max(1,+x.k||1))}));
   S.plan=null;save();lists();show();$('#st').textContent='Загружено адресов: '+S.addrs.length;
  }catch(x){$('#st').textContent='Не удалось прочитать файл адресов.'}
  e.target.value='';
