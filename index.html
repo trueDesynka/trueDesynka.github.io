@@ -1,43 +1,87 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
 <title>Пеший планировщик</title>
 <style>
-:root{--bg:#f6f7f5;--fg:#1d2420;--mut:#66706a;--card:#fff;--ac:#0f766e;--bd:#d8ddd9;--wr:#b45309}
-@media(prefers-color-scheme:dark){:root{--bg:#141917;--fg:#e6ebe8;--mut:#98a39c;--card:#1d2421;--ac:#4fd1c0;--bd:#33403a;--wr:#f0b45a}}
-*{box-sizing:border-box}
-body{margin:0 auto;max-width:900px;padding:16px;font:15px/1.45 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
-h1{font-size:22px;margin:8px 0 4px}h2{font-size:16px;margin:26px 0 6px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}
-input,select,button{font:inherit;padding:7px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
-input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
-button:disabled{opacity:.6;cursor:wait}button{cursor:pointer;background:var(--ac);color:var(--bg);border-color:var(--ac);font-weight:600}button.s{background:var(--card);color:var(--fg);border-color:var(--bd);font-weight:400}
-.sg{position:relative}.sg input{width:100%}.dd{position:absolute;left:0;right:0;top:100%;z-index:5;background:var(--card);border:1px solid var(--bd);border-radius:6px;max-height:260px;overflow:auto}.dd div{padding:8px 10px;cursor:pointer}.dd div:hover{background:var(--bg)}
-.row{display:flex;gap:8px;align-items:center;margin:5px 0;flex-wrap:wrap}.row .t{flex:1;min-width:200px}.m{color:var(--mut);font-size:13px}.w{color:var(--wr)}a{color:var(--ac)}input.n{width:68px}
-.badge{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;margin-left:6px;font-size:12px;color:var(--mut)}
-.dist{white-space:nowrap}.routeStop{font-weight:600}.total{font-size:16px}.hint{padding:9px 11px;border-left:3px solid var(--ac);background:var(--card);border-radius:5px;margin:10px 0}
+:root{--bg:#eef2ef;--card:#fff;--fg:#17211d;--mut:#64716b;--ac:#0f766e;--ac2:#e2f1ee;--onac:#fff;--bd:#dbe3de;--wr:#b45309;--sh:0 1px 2px rgba(20,40,30,.06),0 8px 24px rgba(20,40,30,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1513;--card:#18211e;--fg:#e8eeeb;--mut:#93a39b;--ac:#4fd1c0;--ac2:#173530;--onac:#07201c;--bd:#2b3a35;--wr:#f0b45a;--sh:0 1px 2px rgba(0,0,0,.4)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0 auto;max-width:760px;padding:calc(18px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom));font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+.top{padding:6px 2px 14px}
+h1{font-size:26px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em}
+h2{display:flex;align-items:center;gap:10px;font-size:17px;margin:0 0 12px}
+h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ac);color:var(--onac);font-size:14px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;margin:12px 0;box-shadow:var(--sh)}
+input,select,button{font:inherit;font-size:16px;min-height:46px;padding:9px 12px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--fg)}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button{cursor:pointer;background:var(--ac);color:var(--onac);border-color:var(--ac);font-weight:650}
+button:active{transform:scale(.98)}button:disabled{opacity:.6;cursor:wait}
+button.s{background:var(--card);color:var(--fg);border-color:var(--bd);font-weight:500}
+button.ic{width:46px;padding:0;font-size:15px;color:var(--mut)}
+.sg{position:relative}.sg input{width:100%}
+.dd{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;background:var(--card);border:1px solid var(--bd);border-radius:12px;max-height:50vh;overflow:auto;box-shadow:var(--sh)}
+.dd div{padding:13px 14px;cursor:pointer;border-top:1px solid var(--bd)}.dd div:first-child{border-top:0}.dd div:hover{background:var(--ac2)}
+.row{display:flex;gap:8px 10px;align-items:center;margin:6px 0;flex-wrap:wrap}.row .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.m{color:var(--mut);font-size:14px}.w{color:var(--wr)}a{color:var(--ac)}
+#al:empty::before{content:"Пока нет адресов. Начните вводить адрес выше и выберите его из списка.";display:block;color:var(--mut);padding:12px 2px 2px;font-size:14px}
+#al .row{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;margin:0;padding:12px 0;border-top:1px solid var(--bd)}
+#al .row:first-child{margin-top:12px}
+#al .row .t{grid-column:1/-1;font-weight:550}
+#al select{min-width:72px}
+.lab{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.lab select{flex:1;min-width:190px}
+details.files summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.files summary::-webkit-details-marker{display:none}
+details.files summary::after{content:"+";font-size:22px;color:var(--mut)}details.files[open] summary::after{content:"−"}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.hint{padding:12px 14px;border-radius:12px;background:var(--ac2);margin:14px 0 4px;font-size:15px}
+#st{min-height:20px;padding:0 2px}
+#out .card{padding:14px 16px}
+#out .card>.row:first-child{margin-top:0;margin-bottom:6px}
+#out .card>.row:first-child .t b:first-child{background:var(--ac);color:var(--onac);padding:3px 12px;border-radius:999px;margin-right:6px}
+#out .card .row{margin:0;padding:9px 0;border-top:1px solid var(--bd)}#out .card>.row:first-child{border-top:0;padding-top:0}
+.total{font-size:18px;white-space:nowrap}
+#out svg{width:100%;height:auto;display:block}
+.btnlink{display:flex;justify-content:center;align-items:center;min-height:46px;border-radius:12px;background:var(--ac2);font-weight:600;text-decoration:none}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--bd)}
+.bar button{display:block;width:100%;max-width:760px;margin:0 auto;min-height:52px;font-size:17px;border-radius:14px}
+@media(min-width:600px){body{padding-top:32px}h1{font-size:30px}}
 </style></head><body>
-<h1>Пеший планировщик</h1>
-<div class="m">Добавьте адреса и укажите, сколько раз в неделю каждый нужно посетить.</div>
+<header class="top">
+ <h1>Пеший планировщик</h1>
+ <div class="m">Добавьте адреса и укажите, сколько раз в неделю каждый нужно посетить.</div>
+</header>
 <div id="warn"></div>
 
-<h2>Адреса для посещения</h2>
-<div class="sg"><input id="ai" placeholder="Начните вводить адрес и выберите из списка"></div>
-<div id="al"></div>
+<section class="card">
+ <h2><span class="n">1</span>Адреса для посещения</h2>
+ <div class="sg"><input id="ai" placeholder="Начните вводить адрес" autocomplete="off" enterkeyhint="search"></div>
+ <div id="al"></div>
+</section>
 
-<div class="row" style="margin-top:16px"><label class="m" for="dn">Дней в неделю:</label>
- <select id="dn"><option value="auto">Авто (минимум дней)</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></div>
-<div class="row" style="margin-top:8px">
- <button id="go">Построить маршруты</button>
- <button class="s" id="ex">Экспорт</button>
- <button class="s" id="im">Импорт</button>
- <button class="s" id="sa">Сохранить адреса</button>
- <button class="s" id="la">Загрузить адреса</button>
+<section class="card">
+ <h2><span class="n">2</span>Параметры</h2>
+ <label class="lab"><span>Дней в неделю</span>
+  <select id="dn"><option value="auto">Авто (минимум дней)</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select>
+ </label>
+</section>
+
+<details class="card files">
+ <summary>Файлы: сохранить и загрузить</summary>
+ <div class="grid2">
+  <button class="s" id="sa">Сохранить адреса</button>
+  <button class="s" id="la">Загрузить адреса</button>
+  <button class="s" id="ex">Экспорт всего</button>
+  <button class="s" id="im">Импорт</button>
+ </div>
  <input type="file" id="fa" hidden accept=".json">
  <input type="file" id="fi" hidden accept=".json">
-</div>
+</details>
+
 <div id="st" class="m"></div>
 <div id="out"></div>
+<div class="bar"><button id="go">Построить маршруты</button></div>
 
 <script>
 const BUS_RAW=[
@@ -467,7 +511,7 @@ function lists(){
       '<span class="t">'+esc(a.t)+'</span>'+ 
       '<select data-k="'+i+'">'+[1,2,3,4,5].map(k=>'<option value="'+k+'"'+(k===a.k?' selected':'')+'>'+k+'</option>').join('')+'</select>'+ 
       '<span class="m">раз в неделю</span>'+ 
-      '<button class="s" data-da="'+i+'">Удалить</button>'+ 
+      '<button class="s ic" data-da="'+i+'" aria-label="Удалить адрес">✕</button>'+ 
     '</div>'
   ).join('');
 }
@@ -493,7 +537,7 @@ function show(){
     h+='<div class="card"><div class="row"><span class="t"><b>'+DN[i]+'</b> · '+d.cnt+' адресов</span><b class="total">'+fmtD(d.dist)+'</b></div>'+
       '<div class="m">Старт: '+esc(d.start?.t||'—')+' → '+esc(d.startAddr?.t||'—')+' ('+fmtD(d.startDist||0)+')</div>'+rows+
       '<div class="m">Финиш: '+esc(d.finishAddr?.t||'—')+' → '+esc(d.finish?.t||'—')+' ('+fmtD(d.finishDist||0)+')</div>'+
-      mapSvg(d)+(d.route&&d.route.length>1?'<div class="m" style="margin-top:8px"><a target="_blank" rel="noopener" href="'+yl(d.route)+'">Открыть маршрут в Яндекс Картах</a></div>':'')+
+      mapSvg(d)+(d.route&&d.route.length>1?'<div style="margin-top:10px"><a class="btnlink" target="_blank" rel="noopener" href="'+yl(d.route)+'">Открыть маршрут в Яндекс Картах</a></div>':'')+
       '</div>';
   });
   $('#out').innerHTML=h;
