@@ -257,6 +257,14 @@ const BUS_RAW=[
  ['Торговый центр Южный',56.8220,35.9123,'228'],
  ['ул. Левитана',56.8169,35.9055,'228'],
  ['ул. Псковская',56.8119,35.8992,'228'],
+ /* Дополнительные городские остановки 211/222/35. Маршруты сверены с WikiRoutes; координаты новых точек взяты из Яндекс Панорам/карт, где они доступны. */
+ ['Московская площадь',56.8593478,35.9137729,'211/222'],
+ ['Дом Союзов',56.8509403,35.9380496,'211'],
+ ['Улица Пржевальского',56.8627321,35.9442819,'211'],
+ ['Площадь Мира',56.867542,35.900981,'35'],
+ ['Улица Скворцова-Степанова',56.870953,35.889840,'35'],
+ ['Улица Комарова',56.8746287,35.8627869,'35'],
+ ['Вагоностроительный завод',56.871308,35.853418,'35'],
  /* Маршрут 177 (Лебедево — Савватьевское шоссе). Городские остановки у района адресов.
     Источник: WikiRoutes (wikiroutes.info/en/tver?routes=3130), координаты со страниц остановок. */
  ['Театр Кукол',56.8441314,35.9186384,'177'],
@@ -275,17 +283,19 @@ const BUS_RAW=[
  ['пл. Гагарина (РИО)',56.8474773,35.9427515,'177']
 ].map(x=>({t:x[0],lat:x[1],lon:x[2],route:x[3]}));
 
+/* Совпадающие остановки существующих точек получают новые номера маршрутов. */
+const BUS_ROUTE_ALIASES={
+ 'Сахарово':'35','ул. Андреевская':'35','Аркатово':'35','Жданово':'35','СНТ Мир':'35','Аввакумово':'35','Дачи':'35','Поворот на Рябинки':'35','Сахаровское шоссе, 17':'35','Промкомбинат':'35','Стеклозавод':'35','КСМ-2':'35/211/222','ул. 2-я Силикатная':'35/211/222','ул. Котовского':'35/211/222','ул. Маяковского':'35/211/222','Пожарная площадь':'35/222','Речной вокзал':'35/222','Тверской проспект':'222','ул. Александра Невского':'222','ул. 2-я Новозаводская':'222','Площадь Капошвара':'222','ул. Склизкова':'222','ул. Фадеева':'35/222','Октябрьский проспект':'35/222','Посёлок им. Чкалова':'35/222','Автовокзал':'211/222','Железнодорожный вокзал':'211/222','ул. Коминтерна, 81':'211/222'
+};
 /* Объединяем совпадающие по координатам остановки и сохраняем номера маршрутов. */
 const BUS=(()=>{
  const m=new Map();
- for(const s of BUS_RAW){
+ for(const s0 of BUS_RAW){
+  const s={...s0},ar=BUS_ROUTE_ALIASES[s.t];
+  if(ar){const rs=new Set((s.route+'/'+ar).split('/').filter(Boolean));s.route=[...rs].join('/');}
   const key=s.lat.toFixed(6)+','+s.lon.toFixed(6);
-  if(!m.has(key))m.set(key,{...s});
-  else{
-   const q=m.get(key);
-   const rs=new Set((q.route+'|'+s.route).split('|'));
-   q.route=[...rs].join('/');
-  }
+  if(!m.has(key))m.set(key,s);
+  else{const q=m.get(key),rs=new Set((q.route+'/'+s.route).split('/').filter(Boolean));q.route=[...rs].join('/');}
  }
  return [...m.values()];
 })();
@@ -376,10 +386,11 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
     while(remMask){const bit=remMask&-remMask,b=31-Math.clz32(bit),ns=s|bit,ix=ns*W+b,v=q+D[ids[a]][ids[b]];if(v<dp[ix]-1e-9){dp[ix]=v;par[ix]=a;}remMask-=bit;}
    }
   }
-  const full=F-1;let best=INF,be=-1;
-  for(let a=0;a<m;a++){const e=ep[ids[a]];if(!e)continue;const v=dp[full*W+a]+ec(ids[a]);if(v<best-1e-9||(Math.abs(v-best)<=1e-9&&(be<0||ids[a]<ids[be]))){best=v;be=a;}}
+  const full=F-1;let best=INF,be=-1;const validEndExists=!OPT_END||ids.some(hasEnd);
+  for(let a=0;a<m;a++){const e=ep[ids[a]];if(!e||(OPT_END&&validEndExists&&!hasEnd(ids[a])))continue;const v=dp[full*W+a]+ec(ids[a]);if(v<best-1e-9||(Math.abs(v-best)<=1e-9&&(be<0||ids[a]<ids[be]))){best=v;be=a;}}
   const rev=[];let s=full,a=be;while(a>=0){rev.push(ids[a]);const pa=par[s*W+a];s^=1<<a;a=pa;}
-  const order=rev.reverse(),se=ep[order[0]],ee=ep[order[order.length-1]];
+  let order=rev.reverse(),se=ep[order[0]],ee=ep[order[order.length-1]];
+  if(OPT_START&&OPT_END&&be>=0&&hasEnd(order[order.length-1])&&ee.dist<se.dist-1e-9){order=order.reverse();const t=se;se=ee;ee=t;}
   z={cost:best,order,start:order[0],end:order[order.length-1],bs:OPT_START?se.bus:-1,be:hasEnd(order[order.length-1])?ee.bus:-1};exactCache.set(mask,z);return z;
  }
  function exactTotal(ms){let s=0;for(const m of ms)s+=exact(m).cost;return s;}
@@ -494,7 +505,7 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
   return{e:cur,pat};
  }
  let best=null;
- const STEPS=CF&&CF.STEPS||60000,RESTARTS=CF&&CF.RESTARTS||8;
+ const STEPS=CF&&CF.STEPS||90000,RESTARTS=CF&&CF.RESTARTS||12;
  for(let r=0;r<RESTARTS&&(r===0||performance.now()<deadline);r++){
   const st=initPat(mkRnd(0x9e3779b1*(r+1)));
   const s=sa(0x13579B+r*7919,STEPS,st),p=polish(s.pat);
