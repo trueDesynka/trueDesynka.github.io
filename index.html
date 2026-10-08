@@ -47,6 +47,9 @@ details.files summary::after{content:"+";font-size:22px;color:var(--mut)}details
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--bd)}
 .bar button{display:block;width:100%;max-width:760px;margin:0 auto;min-height:52px;font-size:17px;border-radius:14px}
 @media(min-width:600px){body{padding-top:32px}h1{font-size:30px}}
+.chk{display:flex;align-items:center;gap:12px;min-height:46px;cursor:pointer}
+.chk input{width:22px;height:22px;min-height:0;accent-color:var(--ac);flex:none}
+.lab input[type=number]{width:120px;flex:none}
 </style></head><body>
 <header class="top">
  <h1>Пеший планировщик</h1>
@@ -65,6 +68,14 @@ details.files summary::after{content:"+";font-size:22px;color:var(--mut)}details
  <label class="lab"><span>Дней в неделю</span>
   <select id="dn"><option value="auto">Авто (минимум дней)</option><option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option></select>
  </label>
+</section>
+
+<section class="card">
+ <h2><span class="n">3</span>Остановки автобусов</h2>
+ <label class="chk"><input type="checkbox" id="cs" checked><span>Начинать маршрут с ближайшей остановки</span></label>
+ <label class="chk"><input type="checkbox" id="ce" checked><span>Заканчивать маршрут рядом с остановкой</span></label>
+ <label class="lab"><span>Макс. расстояние от последней точки до остановки, м</span><input type="number" id="cm" inputmode="numeric" min="0" step="50" value="600"></label>
+ <div class="m" style="margin-top:8px">Если последняя точка дальше этого расстояния, конечная остановка в расчёте не учитывается. 0 означает без ограничения.</div>
 </section>
 
 <details class="card files">
@@ -245,7 +256,23 @@ const BUS_RAW=[
  ['ул. Королёва',56.8250,35.9112,'228'],
  ['Торговый центр Южный',56.8220,35.9123,'228'],
  ['ул. Левитана',56.8169,35.9055,'228'],
- ['ул. Псковская',56.8119,35.8992,'228']
+ ['ул. Псковская',56.8119,35.8992,'228'],
+ /* Маршрут 177 (Лебедево — Савватьевское шоссе). Городские остановки у района адресов.
+    Источник: WikiRoutes (wikiroutes.info/en/tver?routes=3130), координаты со страниц остановок. */
+ ['Театр Кукол',56.8441314,35.9186384,'177'],
+ ['Театр Кукол',56.8441839,35.9192660,'177'],
+ ['Парк Победы',56.8463244,35.9130353,'177'],
+ ['пл. Капошвара',56.8476519,35.9081268,'177'],
+ ['ул. Склизкова',56.8439054,35.9022635,'177'],
+ ['Спортивный пер.',56.8397845,35.8971338,'177'],
+ ['Ж/д вокзал',56.8372534,35.8939956,'177'],
+ ['Автовокзал',56.8340399,35.9006327,'177'],
+ ['ул. Коминтерна, 81',56.8305051,35.9098956,'177'],
+ ['Бассейн Радуга',56.8414071,35.9256122,'177'],
+ ['пл. Терешковой',56.8404490,35.9331438,'177'],
+ ['Озёрная ул.',56.8409480,35.9342784,'177'],
+ ['ул. Ротмистрова',56.8432431,35.9372704,'177'],
+ ['пл. Гагарина (РИО)',56.8474773,35.9427515,'177']
 ].map(x=>({t:x[0],lat:x[1],lon:x[2],route:x[3]}));
 
 /* Объединяем совпадающие по координатам остановки и сохраняем номера маршрутов. */
@@ -313,6 +340,10 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
  const D=P.map((a,i)=>P.map((b,j)=>i===j?0:hav(a,b)));
  const SP=BUS.map(s=>P.map(p=>hav(p,s)));
  const NS=P.map((_,i)=>{let bi=0,bd=Infinity;for(let b=0;b<NB;b++){if(SP[b][i]<bd){bd=SP[b][i];bi=b;}}return{dist:bd,bus:bi};});
+ const OPT_START=!(CF&&CF.START===false),OPT_END=!(CF&&CF.END===false),ENDMAX=Math.max(0,+(CF&&CF.ENDMAX)||0);
+ const sc=i=>OPT_START?NS[i].dist:0;
+ const ec=i=>OPT_END?(ENDMAX>0?Math.min(NS[i].dist,ENDMAX):NS[i].dist):0;
+ const hasEnd=i=>OPT_END&&!(ENDMAX>0&&NS[i].dist>ENDMAX);
  const exactCache=new Map(),fastCache=new Map(),endpointCache=new Map();
 
  /* Для заданной остановки берём ближайший адрес дня. Благодаря этому
@@ -332,11 +363,11 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
   const ids=bits(mask),m=ids.length;
   if(!m){z={cost:0,order:[],start:-1,end:-1,bs:-1,be:-1};exactCache.set(mask,z);return z;}
   const ends=endpointOptions(mask);
-  if(m===1){const e=ends.find(x=>x.i===ids[0]);z={cost:2*e.dist,order:[ids[0]],start:ids[0],end:ids[0],bs:e.bus,be:e.bus};exactCache.set(mask,z);return z;}
+  if(m===1){const e=ends.find(x=>x.i===ids[0]);z={cost:sc(ids[0])+ec(ids[0]),order:[ids[0]],start:ids[0],end:ids[0],bs:OPT_START?e.bus:-1,be:hasEnd(ids[0])?e.bus:-1};exactCache.set(mask,z);return z;}
   const ep=new Array(n);for(const e of ends)ep[e.i]=e;
   const F=1<<m,W=m,INF=1e100,dp=new Float64Array(F*W),par=new Int8Array(F*W);
   dp.fill(INF);par.fill(-1);
-  for(let a=0;a<m;a++){const e=ep[ids[a]];if(e)dp[(1<<a)*W+a]=e.dist;}
+  for(let a=0;a<m;a++){const e=ep[ids[a]];if(e)dp[(1<<a)*W+a]=sc(ids[a]);}
   for(let s=1;s<F;s++){
    const row=s*W;
    for(let a=0;a<m;a++){
@@ -346,10 +377,10 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
    }
   }
   const full=F-1;let best=INF,be=-1;
-  for(let a=0;a<m;a++){const e=ep[ids[a]];if(!e)continue;const v=dp[full*W+a]+e.dist;if(v<best-1e-9||(Math.abs(v-best)<=1e-9&&(be<0||ids[a]<ids[be]))){best=v;be=a;}}
+  for(let a=0;a<m;a++){const e=ep[ids[a]];if(!e)continue;const v=dp[full*W+a]+ec(ids[a]);if(v<best-1e-9||(Math.abs(v-best)<=1e-9&&(be<0||ids[a]<ids[be]))){best=v;be=a;}}
   const rev=[];let s=full,a=be;while(a>=0){rev.push(ids[a]);const pa=par[s*W+a];s^=1<<a;a=pa;}
   const order=rev.reverse(),se=ep[order[0]],ee=ep[order[order.length-1]];
-  z={cost:best,order,start:order[0],end:order[order.length-1],bs:se.bus,be:ee.bus};exactCache.set(mask,z);return z;
+  z={cost:best,order,start:order[0],end:order[order.length-1],bs:OPT_START?se.bus:-1,be:hasEnd(order[order.length-1])?ee.bus:-1};exactCache.set(mask,z);return z;
  }
  function exactTotal(ms){let s=0;for(const m of ms)s+=exact(m).cost;return s;}
 
@@ -358,7 +389,7 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
   let z=fastCache.get(mask);if(z!==undefined)return z;
   const ids=bits(mask),m=ids.length;if(!m){fastCache.set(mask,0);return 0;}
   const nearest=ids.map(i=>Math.min(...SP.map(r=>r[i])));
-  if(m===1){const v=2*nearest[0];fastCache.set(mask,v);return v;}
+  if(m===1){const v=sc(ids[0])+ec(ids[0]);fastCache.set(mask,v);return v;}
   let best=Infinity;
   const starts=ids.slice().sort((a,b)=>nearest[ids.indexOf(a)]-nearest[ids.indexOf(b)]||a-b).slice(0,5);
   for(const s0 of starts){
@@ -372,7 +403,7 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
     }
     if(!ch)break;
    }
-   let c=nearest[ids.indexOf(o[0])]+nearest[ids.indexOf(o[o.length-1])];
+   let c=sc(o[0])+ec(o[o.length-1]);
    for(let i=1;i<o.length;i++)c+=D[o[i-1]][o[i]];
    best=Math.min(best,c);
   }
@@ -472,15 +503,15 @@ function optimize(P,BUS,K,CAP,budgetMs,initialMasks,CF){
  const dm=dayMasks(best.pat);
  const days=dm.map(mask=>{
   if(!mask)return{cnt:0,pts:[],legs:[],route:[],dist:0};
-  const z=exact(mask),pts=z.order.map(i=>P[i]),start=BUS[z.bs],finish=BUS[z.be];
-  return{cnt:pts.length,pts,legs:z.order.slice(1).map((j,k)=>({a:P[z.order[k]],b:P[j],w:D[z.order[k]][j]})),start,finish,startAddr:P[z.start],finishAddr:P[z.end],startDist:SP[z.bs][z.start],finishDist:SP[z.be][z.end],dist:z.cost,route:[start,...pts,finish]};
+  const z=exact(mask),pts=z.order.map(i=>P[i]),start=z.bs>=0?BUS[z.bs]:null,finish=z.be>=0?BUS[z.be]:null;
+  return{cnt:pts.length,pts,legs:z.order.slice(1).map((j,k)=>({a:P[z.order[k]],b:P[j],w:D[z.order[k]][j]})),start,finish,startAddr:P[z.start],finishAddr:P[z.end],startDist:z.bs>=0?SP[z.bs][z.start]:null,finishDist:z.be>=0?SP[z.be][z.end]:null,finishNear:{stop:BUS[NS[z.end].bus],dist:NS[z.end].dist},dist:z.cost,route:[start,...pts,finish].filter(Boolean)};
  });
  const out=[0,1,2,3,4].map(w=>{const s=WD.indexOf(w);return s<0?{cnt:0,pts:[],legs:[],route:[],dist:0}:days[s];});
  return{days:out,total:exactTotal(dm),penalty:penTot(best.pat),energy:best.e,target:dm.map(pop)};
 }
 onmessage=e=>{try{const t=performance.now(),r=optimize(e.data.P,e.data.BUS,e.data.K,e.data.CAP,e.data.budgetMs,e.data.initialMasks,e.data.CF);postMessage({ok:true,result:r,elapsed:performance.now()-t});}catch(x){postMessage({ok:false,error:String(x&&x.message||x)});}};
 `;
-function runOptimizer(P,K,initialMasks,ND){return new Promise((resolve,reject)=>{const w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));let timer;const done=()=>{clearTimeout(timer);w.terminate();};w.onmessage=e=>{if(e.data&&e.data.type==='best')return;done();if(e.data&&e.data.ok)resolve(e.data);else reject(Error(e.data&&e.data.error||'Ошибка расчёта.'));};w.onerror=()=>{done();reject(Error('Ошибка фонового расчёта.'));};timer=setTimeout(()=>{done();reject(Error('Расчёт превысил лимит.'));},OPT_MS+5000);w.postMessage({P,BUS,K,CAP:CFG.MAXPTS,budgetMs:OPT_MS,initialMasks,CF:{SPW:CFG.SPW,BAL:CFG.BAL,ND}});});}
+function runOptimizer(P,K,initialMasks,ND){return new Promise((resolve,reject)=>{const w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})));let timer;const done=()=>{clearTimeout(timer);w.terminate();};w.onmessage=e=>{if(e.data&&e.data.type==='best')return;done();if(e.data&&e.data.ok)resolve(e.data);else reject(Error(e.data&&e.data.error||'Ошибка расчёта.'));};w.onerror=()=>{done();reject(Error('Ошибка фонового расчёта.'));};timer=setTimeout(()=>{done();reject(Error('Расчёт превысил лимит.'));},OPT_MS+5000);w.postMessage({P,BUS,K,CAP:CFG.MAXPTS,budgetMs:OPT_MS,initialMasks,CF:{SPW:CFG.SPW,BAL:CFG.BAL,ND,START:$('#cs').checked,END:$('#ce').checked,ENDMAX:Math.max(0,+$('#cm').value||0)}});});}
 $('#go').onclick=async()=>{
  const n=S.addrs.length;if(n<1){$('#st').textContent='Добавьте хотя бы один адрес.';return;}
  const K=S.addrs.map(a=>Math.max(1,Math.min(5,+a.k||1))),total=K.reduce((a,b)=>a+b,0);
@@ -535,8 +566,8 @@ function show(){
     const far=a=>{let m=Infinity;S.addrs.forEach(b=>{if(b.t!==a.t)m=Math.min(m,hav(a,b));});return m;};
     d.pts.forEach((a,k)=>{const w=k?d.legs[k-1].w:0,f=far(a);rows+='<div class="row"><span class="t">'+(k+1)+'. '+esc(a.t)+(k?' <span class="m">· '+fmtD(w)+' от предыдущей</span>':'')+(f>700?' <span class="w">· адрес стоит отдельно, ближайший другой адрес в '+fmtD(f)+'</span>':'')+'</span></div>';});
     h+='<div class="card"><div class="row"><span class="t"><b>'+DN[i]+'</b> · '+d.cnt+' адресов</span><b class="total">'+fmtD(d.dist)+'</b></div>'+
-      '<div class="m">Старт: '+esc(d.start?.t||'—')+' → '+esc(d.startAddr?.t||'—')+' ('+fmtD(d.startDist||0)+')</div>'+rows+
-      '<div class="m">Финиш: '+esc(d.finishAddr?.t||'—')+' → '+esc(d.finish?.t||'—')+' ('+fmtD(d.finishDist||0)+')</div>'+
+      (d.start?'<div class="m">Старт: остановка «'+esc(d.start.t)+'» (авт. '+esc(d.start.route||'')+') → '+esc(d.startAddr.t)+' · '+fmtD(d.startDist)+'</div>':'<div class="m">Старт: '+esc(d.startAddr?.t||'—')+' (остановка не учитывалась)</div>')+rows+
+      (d.finish?'<div class="m">Финиш: '+esc(d.finishAddr.t)+' → остановка «'+esc(d.finish.t)+'» (авт. '+esc(d.finish.route||'')+') · '+fmtD(d.finishDist)+'</div>':'<div class="m w">Финиш: '+esc(d.finishAddr?.t||'—')+(d.finishNear?' · ближайшая остановка «'+esc(d.finishNear.stop.t)+'» в '+fmtD(d.finishNear.dist)+', остановка не учитывалась':'')+'</div>')+
       mapSvg(d)+(d.route&&d.route.length>1?'<div style="margin-top:10px"><a class="btnlink" target="_blank" rel="noopener" href="'+yl(d.route)+'">Открыть маршрут в Яндекс Картах</a></div>':'')+
       '</div>';
   });
@@ -544,6 +575,15 @@ function show(){
 }
 
 try{const dv=localStorage.getItem('rp_days');if(dv)$('#dn').value=dv;}catch(e){}
+(function(){
+ let st={};try{st=JSON.parse(localStorage.getItem('rp_stops')||'{}');}catch(e){}
+ if(st.cs===false)$('#cs').checked=false;
+ if(st.ce===false)$('#ce').checked=false;
+ if(st.cm!=null&&st.cm!=='')$('#cm').value=st.cm;
+ const upd=()=>{$('#cm').disabled=!$('#ce').checked;
+  try{localStorage.setItem('rp_stops',JSON.stringify({cs:$('#cs').checked,ce:$('#ce').checked,cm:$('#cm').value}));}catch(e){}};
+ ['cs','ce','cm'].forEach(i=>$('#'+i).addEventListener('change',upd));upd();
+})();
 lists();show();
 
 </script></body></html>
